@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackLine - Evaluaciones</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">HackLine</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="eventos.html">Eventos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="participantes.html">Participantes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="equipos.html">Equipos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="proyectos.html">Proyectos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="mentores.html">Mentores</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="evaluaciones.html">Evaluaciones</a></li>
+                    <li class="nav-item"><a class="nav-link" href="cronograma.html">Cronograma</a></li>
+                    <li class="nav-item"><a class="nav-link" href="historial.html">Historial</a></li>
+                    <li class="nav-item"><a class="nav-link" href="perfil.html">Perfil</a></li>
+                </ul>
+                <span class="navbar-text ms-3 position-relative" id="notificacionesContainer"><i class="fas fa-bell"></i></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h1 class="display-5 fw-bold text-white"><i class="fas fa-star me-3"></i>Evaluaciones y Resultados</h1>
+            <p class="text-white-50">Evaluar proyectos y publicar resultados.</p>
+        </div>
+
+        <div class="card-custom mb-4">
+            <div class="card-body p-4">
+                <h5 class="mb-3"><i class="fas fa-clipboard-list me-2 text-primary"></i>Registrar Evaluación</h5>
+                <input type="hidden" id="evaluacionEditId" value="">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6"><label class="form-label fw-semibold">Proyecto <span class="text-danger">*</span></label><select id="evaluacionProyectoId" class="form-select" required><option value="" disabled selected>Seleccione un proyecto</option></select></div>
+                    <div class="col-md-6"><label class="form-label fw-semibold">Juez <span class="text-danger">*</span></label><input type="text" id="evaluacionJuez" class="form-control" placeholder="Nombre del juez" required></div>
+                    <div class="col-md-3"><label class="form-label fw-semibold">Innovación (0-100) <span class="text-danger">*</span></label><input type="number" id="evaluacionInnovacion" class="form-control" min="0" max="100" placeholder="0" required></div>
+                    <div class="col-md-3"><label class="form-label fw-semibold">Complejidad (0-100) <span class="text-danger">*</span></label><input type="number" id="evaluacionComplejidad" class="form-control" min="0" max="100" placeholder="0" required></div>
+                    <div class="col-md-3"><label class="form-label fw-semibold">Presentación (0-100) <span class="text-danger">*</span></label><input type="number" id="evaluacionPresentacion" class="form-control" min="0" max="100" placeholder="0" required></div>
+                    <div class="col-md-3"><label class="form-label fw-semibold">Impacto (0-100) <span class="text-danger">*</span></label><input type="number" id="evaluacionImpacto" class="form-control" min="0" max="100" placeholder="0" required></div>
+                    <div class="col-12"><label class="form-label fw-semibold">Comentarios <span class="text-danger">*</span></label><textarea id="evaluacionComentarios" class="form-control" rows="2" placeholder="Observaciones adicionales" required></textarea></div>
+                    <div class="col-12 d-flex gap-2">
+                        <button class="btn btn-primary" id="btnGuardarEvaluacion" onclick="guardarEvaluacion()"><i class="fas fa-save me-2"></i>Guardar Evaluación</button>
+                        <button class="btn btn-secondary" id="btnCancelarEdicion" onclick="cancelarEdicionEvaluacion()" style="display: none;"><i class="fas fa-times me-2"></i>Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-custom mb-4">
+            <div class="card-header bg-white border-0 pt-4"><h5 class="mb-0"><i class="fas fa-list me-2 text-info"></i>Evaluaciones Registradas</h5></div>
+            <div class="card-body">
+                <div id="evaluacionesBody"></div>
+            </div>
+        </div>
+
+        <div class="card-custom">
+            <div class="card-header bg-white border-0 pt-4"><h5 class="mb-0"><i class="fas fa-trophy me-2 text-warning"></i>Ranking Final</h5></div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead><tr><th>#</th><th>Proyecto</th><th>Equipo</th><th>Puntaje Promedio</th></td></thead>
+                        <tbody id="rankingBody"></tbody>
+                    </table>
+                </div>
+                <button class="btn btn-success mt-3" onclick="publicarResultados()"><i class="fas fa-globe me-2"></i>Publicar Resultados</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-custom"><p>HackLine</p></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof actualizarSelectProyectosEvaluacion === 'function') actualizarSelectProyectosEvaluacion();
+            if (typeof renderizarEvaluaciones === 'function') renderizarEvaluaciones();
+            if (typeof renderizarResultados === 'function') renderizarResultados();
+            if (typeof actualizarBadgeNotificaciones === 'function') actualizarBadgeNotificaciones();
+        });
+    </script>
+</body>
+</html>

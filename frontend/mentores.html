@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackLine - Mentores</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">HackLine</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="eventos.html">Eventos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="participantes.html">Participantes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="equipos.html">Equipos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="proyectos.html">Proyectos</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="mentores.html">Mentores</a></li>
+                    <li class="nav-item"><a class="nav-link" href="evaluaciones.html">Evaluaciones</a></li>
+                    <li class="nav-item"><a class="nav-link" href="cronograma.html">Cronograma</a></li>
+                    <li class="nav-item"><a class="nav-link" href="historial.html">Historial</a></li>
+                    <li class="nav-item"><a class="nav-link" href="perfil.html">Perfil</a></li>
+                </ul>
+                <span class="navbar-text ms-3 position-relative" id="notificacionesContainer"><i class="fas fa-bell"></i></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h1 class="display-5 fw-bold text-white"><i class="fas fa-chalkboard-user me-3"></i>Gestión de Mentores</h1>
+            <p class="text-white-50">Registrar mentores que guiarán a los equipos.</p>
+        </div>
+
+        <div class="card-custom">
+            <div class="card-body p-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3"><label class="form-label fw-semibold">Nombre</label><input type="text" id="mentorNombre" class="form-control" placeholder="Ej: Dra. Laura Méndez" required></div>
+                    <div class="col-md-3"><label class="form-label fw-semibold">Email</label><input type="email" id="mentorEmail" class="form-control" placeholder="laura@mentor.com" required></div>
+                    <div class="col-md-3"><label class="form-label fw-semibold">Especialidad</label><input type="text" id="mentorEspecialidad" class="form-control" placeholder="Inteligencia Artificial" required></div>
+                    <div class="col-md-3"><label class="form-label fw-semibold">Teléfono</label><input type="text" id="mentorTelefono" class="form-control" placeholder="555-0101" required></div>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <button class="btn btn-primary" id="mentorGuardarBtn" type="button" onclick="guardarMentor()"><i class="fas fa-plus-circle me-2"></i>Agregar Mentor</button>
+                    <button class="btn btn-secondary d-none" id="mentorCancelarBtn" type="button" onclick="cancelarEdicionMentor()">Cancelar</button>
+                </div>
+
+                <div class="table-responsive mt-4">
+                    <table class="table table-hover align-middle">
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Especialidad</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+                        <tbody id="mentoresBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="card-custom mt-5">
+                    <div class="card-body p-4">
+                        <h5 class="mb-3">Asignar Mentor a Equipo</h5>
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Mentor</label>
+                                <select id="asignacionMentorId" class="form-select"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Equipo</label>
+                                <select id="asignacionEquipoId" class="form-select"></select>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button class="btn btn-success" id="asignacionGuardarBtn" type="button" onclick="asignarMentorEquipo()"><i class="fas fa-link me-2"></i>Asignar Mentor</button>
+                                    <button class="btn btn-secondary d-none" id="asignacionCancelarBtn" type="button" onclick="cancelarEdicionAsignacion()">Cancelar</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive mt-3">
+                            <table class="table table-hover align-middle">
+                                <thead><tr><th>Equipo</th><th>Nombre del equipo</th><th>Mentor asignado</th><th>Acciones</th></tr></thead>
+                                <tbody id="asignacionesBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-custom"><p>HackLine</p></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof renderizarMentores === 'function') renderizarMentores();
+            if (typeof renderizarAsignaciones === 'function') renderizarAsignaciones();
+            if (typeof cargarSelectMentores === 'function') cargarSelectMentores();
+            if (typeof cargarSelectEquiposAsignacion === 'function') cargarSelectEquiposAsignacion();
+            if (typeof actualizarBadgeNotificaciones === 'function') actualizarBadgeNotificaciones();
+        });
+    </script>
+</body>
+</html>
