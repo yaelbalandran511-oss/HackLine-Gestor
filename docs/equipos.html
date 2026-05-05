@@ -11,6 +11,8 @@
 </head>
 <body>
 
+    
+    
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow">
         <div class="container">
             <a class="navbar-brand" href="index.html">HackLine</a>
@@ -38,14 +40,19 @@
     </nav>
 
     <div class="container py-4">
+        <!-- Encabezado de la página -->
         <div class="text-center mb-5">
             <h1 class="display-5 fw-bold text-white"><i class="fas fa-user-friends me-3"></i>Gestión de Equipos</h1>
             <p class="text-white-50">Formar equipos y asignar participantes.</p>
         </div>
 
+       
+        <!-- FORMULARIO PARA AGREGAR/EDITAR EQUIPOS       -->
+        <!-- Los datos se envían a la API POST /api/equipos -->
+        <!-- En modo edición, se usa PUT /api/equipos/:id   -->
+        
         <div class="card-custom">
             <div class="card-body p-4">
-                <!-- Formulario de equipos -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">
@@ -57,6 +64,7 @@
                         <label class="form-label fw-semibold">
                             <i class="fas fa-calendar-check me-1 text-primary"></i>Evento asociado
                         </label>
+                        <!-- Select que se llena con cargarSelectEventos() desde app.js -->
                         <select id="equipoEventoId" class="form-select"></select>
                     </div>
                     <div class="col-md-4">
@@ -69,19 +77,26 @@
                 
                 <!-- Botones de acción -->
                 <div class="d-flex gap-2">
+                    <!-- Botón Guardar: Agrega o actualiza según el modo -->
                     <button class="btn btn-primary" id="equipoGuardarBtn" type="button">
                         <i class="fas fa-plus-circle me-2"></i>Agregar Equipo
                     </button>
+                    <!-- Botón Cancelar: aparece solo en modo edición -->
                     <button class="btn btn-secondary" id="equipoCancelarBtn" type="button" style="display: none;">
                         <i class="fas fa-times me-2"></i>Cancelar
                     </button>
                 </div>
 
-                <!-- Tabla de equipos -->
+              
+                <!-- TABLA DE EQUIPOS                             -->
+                <!-- Muestra todos los equipos con botones       -->
+                <!-- Editar: Carga los datos en el formulario     -->
+                <!-- Eliminar: DELETE /api/equipos/:id            -->
+             
                 <div class="table-responsive mt-4">
                     <table class="table table-hover align-middle">
                         <thead>
-                            <tr>
+                            <table>
                                 <th>ID</th>
                                 <th>Nombre</th>
                                 <th>Evento ID</th>
@@ -101,6 +116,7 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/app.js"></script>
+    <script src="js/app.js"></script>
+    
 </body>
 </html>
