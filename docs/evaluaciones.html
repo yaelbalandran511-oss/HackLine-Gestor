@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HackLine - Evaluaciones</title>
+    <!-- Bootstrap, Font Awesome, Google Fonts y estilos personalizados -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -11,6 +12,9 @@
 </head>
 <body>
 
+    <!-- ============================================ -->
+    <!-- BARRA DE NAVEGACIÓN (igual en todas las páginas) -->
+    <!-- ============================================ -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow">
         <div class="container">
             <a class="navbar-brand" href="index.html">HackLine</a>
@@ -30,7 +34,6 @@
                     <li class="nav-item"><a class="nav-link" href="historial.html">Historial</a></li>
                     <li class="nav-item"><a class="nav-link" href="perfil.html">Perfil</a></li>
                 </ul>
-                <span class="navbar-text ms-3 position-relative" id="notificacionesContainer"><i class="fas fa-bell"></i></span>
             </div>
         </div>
     </nav>
@@ -42,10 +45,11 @@
             <p class="text-white-50">Evaluar proyectos y publicar resultados.</p>
         </div>
 
+        <!-- ============================================ -->
         <!-- SECCIÓN 1: FORMULARIO PARA EVALUACIONES      -->
         <!-- POST /api/evaluaciones para crear            -->
         <!-- PUT /api/evaluaciones/:id para editar        -->
-
+        <!-- ============================================ -->
         <div class="card-custom mb-4">
             <div class="card-body p-4">
                 <h5 class="mb-3"><i class="fas fa-clipboard-list me-2 text-primary"></i>Registrar Evaluación</h5>
@@ -71,9 +75,11 @@
             </div>
         </div>
 
+        <!-- ============================================ -->
         <!-- SECCIÓN 2: LISTADO DE EVALUACIONES          -->
         <!-- Muestra todas las evaluaciones registradas  -->
-        <!-- Incluye botones Editar/Eliminar              -->
+        <!-- Incluye botones Editar/Eliminar             -->
+        <!-- ============================================ -->
         <div class="card-custom mb-4">
             <div class="card-header bg-white border-0 pt-4"><h5 class="mb-0"><i class="fas fa-list me-2 text-info"></i>Evaluaciones Registradas</h5></div>
             <div class="card-body">
@@ -81,9 +87,11 @@
             </div>
         </div>
 
+        <!-- ============================================ -->
         <!-- SECCIÓN 3: RANKING FINAL                    -->
         <!-- Muestra el ranking de proyectos por promedio -->
-        <!-- Botón para publicar resultados               -->
+        <!-- Botón para publicar resultados              -->
+        <!-- ============================================ -->
         <div class="card-custom">
             <div class="card-header bg-white border-0 pt-4"><h5 class="mb-0"><i class="fas fa-trophy me-2 text-warning"></i>Ranking Final</h5></div>
             <div class="card-body">
@@ -98,7 +106,7 @@
                             </tr>
                         </thead>
                         <tbody id="rankingBody"></tbody>
-                    <tr>
+                    </table>
                 </div>
                 <!-- Botón para hacer públicos los resultados -->
                 <button class="btn btn-success mt-3" onclick="publicarResultados()"><i class="fas fa-globe me-2"></i>Publicar Resultados</button>
@@ -111,16 +119,17 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/app.js"></script>
 
+    <!-- ============================================ -->
     <!-- INICIALIZACIÓN DE LA PÁGINA                 -->
     <!-- actualizarSelectProyectosEvaluacion(): Llena el select de proyectos -->
     <!-- renderizarEvaluaciones(): Carga la lista de evaluaciones -->
-    <!-- renderizarResultados(): Carga el ranking -->
+    <!-- renderizarResultados(): Carga el ranking     -->
+    <!-- ============================================ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof actualizarSelectProyectosEvaluacion === 'function') actualizarSelectProyectosEvaluacion();
             if (typeof renderizarEvaluaciones === 'function') renderizarEvaluaciones();
             if (typeof renderizarResultados === 'function') renderizarResultados();
-            if (typeof actualizarBadgeNotificaciones === 'function') actualizarBadgeNotificaciones();
         });
     </script>
 </body>

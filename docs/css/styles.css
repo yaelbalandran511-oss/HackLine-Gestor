@@ -1,4 +1,9 @@
-﻿/* css/styles.css */
+﻿/* css/styles.css - Estilos principales del sistema HackLine */
+
+/* ============================================ */
+/* RESET Y VARIABLES GLOBALES                   */
+/* ============================================ */
+
 * {
     margin: 0;
     padding: 0;
@@ -22,6 +27,10 @@ html {
     scroll-behavior: smooth;
 }
 
+/* ============================================ */
+/* FONDO Y CUERPO PRINCIPAL                     */
+/* ============================================ */
+
 body {
     font-family: 'Inter', 'Segoe UI', sans-serif;
     min-height: 100vh;
@@ -39,6 +48,10 @@ body::before {
     pointer-events: none;
     z-index: -1;
 }
+
+/* ============================================ */
+/* BARRA DE NAVEGACIÓN                          */
+/* ============================================ */
 
 .navbar {
     background: rgba(15, 23, 42, 0.88) !important;
@@ -88,9 +101,17 @@ body::before {
     margin-left: auto !important;
 }
 
+/* ============================================ */
+/* CONTENEDOR PRINCIPAL                         */
+/* ============================================ */
+
 .container {
     max-width: 1140px;
 }
+
+/* ============================================ */
+/* TARJETAS PERSONALIZADAS                      */
+/* ============================================ */
 
 .card-custom {
     background: rgba(255, 255, 255, 0.96);
@@ -121,6 +142,10 @@ body::before {
     padding: 2rem;
 }
 
+/* ============================================ */
+/* TARJETAS DE ESTADÍSTICAS (DASHBOARD)         */
+/* ============================================ */
+
 .stats-card {
     background: rgba(255, 255, 255, 0.98);
     border-radius: 1.25rem;
@@ -145,6 +170,10 @@ body::before {
     color: var(--muted);
     margin-bottom: 0;
 }
+
+/* ============================================ */
+/* TABLAS                                       */
+/* ============================================ */
 
 .table-responsive {
     border-radius: 1.25rem;
@@ -175,6 +204,10 @@ body::before {
     border-top: 1px solid rgba(15, 23, 42, 0.06);
 }
 
+/* ============================================ */
+/* BADGES E IDENTIFICADORES                     */
+/* ============================================ */
+
 .badge-id {
     background: rgba(99, 102, 241, 0.12);
     color: #4338ca;
@@ -184,6 +217,10 @@ body::before {
     font-weight: 600;
     display: inline-block;
 }
+
+/* ============================================ */
+/* BOTONES                                      */
+/* ============================================ */
 
 .btn {
     border-radius: 0.9rem;
@@ -218,6 +255,10 @@ body::before {
     border-color: var(--danger);
 }
 
+/* ============================================ */
+/* FORMULARIOS                                  */
+/* ============================================ */
+
 .form-control, .form-select {
     border-radius: 0.95rem;
     border: 1px solid rgba(15, 23, 42, 0.14);
@@ -232,6 +273,10 @@ body::before {
 .form-label {
     color: #374151;
 }
+
+/* ============================================ */
+/* PERFIL DE USUARIO                            */
+/* ============================================ */
 
 .perfil-avatar {
     width: 130px;
@@ -250,6 +295,10 @@ body::before {
     color: #ffffff;
 }
 
+/* ============================================ */
+/* FOOTER                                       */
+/* ============================================ */
+
 .footer-custom {
     background: rgba(15, 23, 42, 0.78);
     backdrop-filter: blur(10px);
@@ -263,6 +312,10 @@ body::before {
 .footer-custom p {
     margin: 0;
 }
+
+/* ============================================ */
+/* MENSAJES FLOTANTES                           */
+/* ============================================ */
 
 .mensaje-flotante {
     position: fixed;
@@ -281,57 +334,10 @@ body::before {
     to { transform: translateX(0); opacity: 1; }
 }
 
-@media (max-width: 768px) {
-    .navbar .navbar-text {
-        display: none;
-    }
-    .navbar-nav {
-        justify-content: flex-start;
-    }
-    .navbar-collapse {
-        padding-left: 0;
-    }
-    .stats-card h3 {
-        font-size: 2rem;
-    }
-    .card-body {
-        padding: 1.4rem;
-    }
-}
+/* ============================================ */
+/* CONFIGURACIÓN (API KEYS, BITÁCORA)           */
+/* ============================================ */
 
-/* Badges y notificaciones */
-.notification-badge {
-    position: relative;
-    display: inline-block;
-}
-
-.notification-badge .badge-count {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: #ef4444;
-    color: white;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 10px;
-    font-weight: bold;
-}
-
-.notification-item {
-    transition: background 0.2s ease;
-    cursor: pointer;
-}
-
-.notification-item:hover {
-    background: #f1f5f9;
-}
-
-.notification-unread {
-    background: #eef2ff;
-    border-left: 3px solid #4f46e5;
-}
-
-/* Configuración cards */
 .config-card {
     cursor: pointer;
     transition: all 0.2s ease;
@@ -342,7 +348,6 @@ body::before {
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
-/* API Keys */
 .api-key-item {
     font-family: 'Courier New', monospace;
     background: #1e293b;
@@ -352,7 +357,6 @@ body::before {
     font-size: 12px;
 }
 
-/* Bitácora */
 .log-entry {
     font-size: 12px;
     border-left: 3px solid;
@@ -366,58 +370,12 @@ body::before {
 .log-entry.success { border-left-color: #10b981; }
 .log-entry.error { border-left-color: #ef4444; }
 
-/* Notificaciones */
-#notificacionesContainer {
-    position: relative;
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
+/* ============================================ */
+/* RESPONSIVE DESIGN                            */
+/* ============================================ */
 
-#notificacionesContainer:hover {
-    color: #ffffff !important;
-}
-
-#notificacionesContainer .badge {
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
-#notificacionesDropdown {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(99, 102, 241, 0.3) rgba(99, 102, 241, 0.1);
-}
-
-#notificacionesDropdown::-webkit-scrollbar {
-    width: 6px;
-}
-
-#notificacionesDropdown::-webkit-scrollbar-track {
-    background: rgba(99, 102, 241, 0.1);
-    border-radius: 3px;
-}
-
-#notificacionesDropdown::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.3);
-    border-radius: 3px;
-}
-
-#notificacionesDropdown::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.5);
-}
-
-/* Responsive Design for All Screens */
-
-/* Extra small devices (phones, 576px and down) */
+/* Dispositivos extra pequeños (móviles, menos de 576px) */
 @media (max-width: 575px) {
-    #notificacionesDropdown {
-        right: 10px !important;
-        left: auto !important;
-        max-width: none !important;
-    }
     .navbar-brand {
         font-size: 1.2rem;
     }
@@ -452,7 +410,7 @@ body::before {
     }
 }
 
-/* Small devices (tablets, 576px to 767px) */
+/* Dispositivos pequeños (tablets, 576px a 767px) */
 @media (min-width: 576px) and (max-width: 767px) {
     .navbar-brand {
         font-size: 1.3rem;
@@ -483,7 +441,7 @@ body::before {
     }
 }
 
-/* Medium devices (desktops, 768px to 991px) */
+/* Dispositivos medianos (desktops pequeños, 768px a 991px) */
 @media (min-width: 768px) and (max-width: 991px) {
     .container {
         max-width: 960px;
@@ -503,10 +461,75 @@ body::before {
     }
 }
 
-/* Large devices (large desktops, 992px and up) */
+/* Dispositivos grandes (desktops, 992px y superiores) */
+@media (max-width: 768px) {
+    .navbar .navbar-text {
+        display: none;
+    }
+    .navbar-nav {
+        justify-content: flex-start;
+    }
+    .navbar-collapse {
+        padding-left: 0;
+    }
+    .stats-card h3 {
+        font-size: 2rem;
+    }
+    .card-body {
+        padding: 1.4rem;
+    }
+}
+
 @media (min-width: 992px) {
     .container {
         max-width: 1140px;
     }
-    /* Already set, but ensuring */
+}
+
+/* Estilos para botones de acción en tablas */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    font-size: 0.95rem;
+    cursor: pointer;
+    margin: 0 2px;
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.btn-icon:hover {
+    transform: scale(1.08);
+}
+
+.btn-edit {
+    background-color: #f59e0b;
+    color: #111827;
+}
+
+.btn-edit:hover {
+    background-color: #d97706;
+    color: #ffffff;
+}
+
+.btn-delete {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+.btn-delete:hover {
+    background-color: #dc2626;
+}
+
+/* Estilos para la tabla de equipos */
+#equiposBody td {
+    vertical-align: middle;
+}
+
+.acciones-cell {
+    white-space: nowrap;
 }

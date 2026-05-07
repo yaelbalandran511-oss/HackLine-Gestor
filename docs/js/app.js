@@ -5,7 +5,8 @@
 // ============================================
 const API_URL = 'http://localhost:3000/api';
 
-// Variables para edición
+// Variables para controlar modo edición en cada módulo
+let eventoEditId = null;
 let participanteEditId = null;
 let equipoEditId = null;
 let proyectoEditId = null;
@@ -17,6 +18,8 @@ let evaluacionEditId = null;
 // ============================================
 // FUNCIONES DE UTILIDAD
 // ============================================
+
+/** Muestra mensaje flotante (éxito o error) */
 function mostrarMensaje(mensaje, esError = false) {
     const div = document.createElement('div');
     div.className = `mensaje-flotante alert ${esError ? 'alert-danger' : 'alert-success'}`;
@@ -25,6 +28,7 @@ function mostrarMensaje(mensaje, esError = false) {
     setTimeout(() => div.remove(), 3000);
 }
 
+/** Formatea fecha para mostrar en la interfaz (DD/MM/YYYY) */
 function formatearFecha(fecha) {
     if (!fecha) return '';
     const date = new Date(fecha);
@@ -35,6 +39,7 @@ function formatearFecha(fecha) {
     });
 }
 
+/** Convierte fecha para input date (YYYY-MM-DD) */
 function fechaParaInput(fecha) {
     if (!fecha) return '';
     const date = new Date(fecha);
@@ -42,6 +47,18 @@ function fechaParaInput(fecha) {
     return offsetDate.toISOString().slice(0, 10);
 }
 
+/** Limpia el formulario de eventos */
+function limpiarFormularioEvento() {
+    const campos = ['eventoNombre', 'eventoFechaInicio', 'eventoFechaFin', 'eventoLugar', 'eventoDescripcion'];
+    campos.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const cupoInput = document.getElementById('eventoCupo');
+    if (cupoInput) cupoInput.value = '50';
+}
+
+/** Limpia el formulario de equipos */
 function limpiarFormularioEquipo() {
     const nombreInput = document.getElementById('equipoNombre');
     if (nombreInput) nombreInput.value = '';
@@ -51,58 +68,33 @@ function limpiarFormularioEquipo() {
     if (miembrosInput) miembrosInput.value = '';
 }
 
-function setupEquipoFormListeners() {
-    const btnGuardar = document.getElementById('equipoGuardarBtn');
-    if (btnGuardar) {
-        btnGuardar.type = 'button';
-        btnGuardar.addEventListener('click', guardarEquipo);
-    }
-    const btnCancelar = document.getElementById('equipoCancelarBtn');
-    if (btnCancelar) {
-        btnCancelar.type = 'button';
-        btnCancelar.addEventListener('click', cancelarEdicionEquipo);
-    }
-}
-
-function setupEventoFormListeners() {
-    const btnGuardar = document.getElementById('eventoGuardarBtn');
-    if (btnGuardar) {
-        btnGuardar.type = 'button';
-        btnGuardar.addEventListener('click', guardarEvento);
-    }
-}
-
 // ============================================
-// ================ DASHBOARD =================
+// DASHBOARD - Panel de control principal
 // ============================================
 
-// ============================================
-// ================ DASHBOARD =================
-// ============================================
-
+/** Renderiza el dashboard con estadísticas, eventos recientes y ranking */
 async function renderizarDashboard() {
     const eventos = await obtenerEventos();
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     
-    // Filtrar eventos pasados (solo para uso interno, no se muestra)
-    const eventosPasados = eventos.filter(evento => {
-        const fechaFin = new Date(evento.fecha_fin);
-        return fechaFin < hoy;
-    });
+    // Filtrar eventos futuros (fecha_inicio >= hoy)
+    const eventosFuturos = eventos.filter(evento => {
+        const fechaInicio = new Date(evento.fecha_inicio);
+        return fechaInicio >= hoy;
+    }).slice(0, 5); // Últimos 5 eventos futuros
     
-    // Eventos recientes (últimos 5 eventos en general)
+    // Eventos recientes (últimos 5)
     const tbodyEventos = document.getElementById('eventosResumenBody');
     if (tbodyEventos) {
         tbodyEventos.innerHTML = '';
-        const eventosRecientes = eventos.slice(0, 5);
-        if (eventosRecientes.length === 0) {
+        if (eventosFuturos.length === 0) {
             const row = tbodyEventos.insertRow();
             row.insertCell(0).colSpan = 5;
-            row.insertCell(0).textContent = "No hay eventos registrados";
+            row.insertCell(0).textContent = "No hay eventos próximos";
             row.classList.add('text-center', 'text-muted');
         } else {
-            eventosRecientes.forEach(e => {
+            eventosFuturos.forEach(e => {
                 const row = tbodyEventos.insertRow();
                 row.insertCell(0).innerHTML = `<span class="badge-id">#${e.id_evento}</span>`;
                 row.insertCell(1).textContent = e.nombre;
@@ -113,10 +105,7 @@ async function renderizarDashboard() {
         }
     }
     
-    // Actualizar stats (solo los 4 originales)
-    await actualizarStats();
-    
-    // Ranking resumen (top 5)
+    // Ranking top 5
     const ranking = await obtenerRanking();
     const tbodyRanking = document.getElementById('rankingResumenBody');
     if (tbodyRanking) {
@@ -140,12 +129,15 @@ async function renderizarDashboard() {
             });
         }
     }
+    
+    await actualizarStats();
 }
 
 // ============================================
-// ================= EVENTOS ==================
+// EVENTOS - CRUD completo
 // ============================================
 
+/** Obtener todos los eventos */
 async function obtenerEventos() {
     try {
         const response = await fetch(`${API_URL}/eventos`);
@@ -157,6 +149,7 @@ async function obtenerEventos() {
     }
 }
 
+/** Obtener un evento por ID */
 async function obtenerEventoPorId(id) {
     try {
         const response = await fetch(`${API_URL}/eventos/${id}`);
@@ -168,16 +161,7 @@ async function obtenerEventoPorId(id) {
     }
 }
 
-function limpiarFormularioEvento() {
-    const campos = ['eventoNombre', 'eventoFechaInicio', 'eventoFechaFin', 'eventoLugar', 'eventoDescripcion'];
-    campos.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    const cupoInput = document.getElementById('eventoCupo');
-    if (cupoInput) cupoInput.value = '50';
-}
-
+/** Agregar un nuevo evento (POST) */
 async function agregarEvento() {
     const nombre = document.getElementById('eventoNombre')?.value;
     const fecha_inicio = document.getElementById('eventoFechaInicio')?.value;
@@ -191,10 +175,8 @@ async function agregarEvento() {
     if (!fecha_fin) return mostrarMensaje("Fecha de fin obligatoria", true);
     if (!lugar?.trim()) return mostrarMensaje("Lugar obligatorio", true);
 
-    const cupo = cupo_maximo?.trim() ? parseInt(cupo_maximo, 10) : 50;
-    if (cupo_maximo?.trim() && (isNaN(cupo) || cupo <= 0)) {
-        return mostrarMensaje("Cupo debe ser mayor que cero", true);
-    }
+    const cupo = parseInt(cupo_maximo) || 50;
+    if (cupo <= 0) return mostrarMensaje("Cupo debe ser mayor que cero", true);
 
     try {
         const response = await fetch(`${API_URL}/eventos`, {
@@ -222,10 +204,79 @@ async function agregarEvento() {
     }
 }
 
-async function guardarEvento() {
-    await agregarEvento();
+/** Actualizar un evento existente (PUT) */
+async function actualizarEvento(id) {
+    const nombre = document.getElementById('eventoNombre')?.value;
+    const fecha_inicio = document.getElementById('eventoFechaInicio')?.value;
+    const fecha_fin = document.getElementById('eventoFechaFin')?.value;
+    const lugar = document.getElementById('eventoLugar')?.value;
+    const cupo_maximo = parseInt(document.getElementById('eventoCupo')?.value);
+    const descripcion = document.getElementById('eventoDescripcion')?.value;
+
+    try {
+        const response = await fetch(`${API_URL}/eventos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                nombre, 
+                fecha_inicio, 
+                fecha_fin, 
+                lugar, 
+                descripcion, 
+                cupo_maximo 
+            })
+        });
+
+        if (!response.ok) throw new Error('Error al actualizar evento');
+        
+        mostrarMensaje('Evento actualizado correctamente');
+        limpiarFormularioEvento();
+        
+        eventoEditId = null;
+        const btn = document.getElementById('eventoGuardarBtn');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Agregar Evento';
+        }
+        
+        await renderizarEventos();
+        await actualizarStats();
+    } catch (error) {
+        mostrarMensaje(error.message, true);
+    }
 }
 
+/** Editar evento (cargar datos en formulario) */
+async function editarEvento(id) {
+    const evento = await obtenerEventoPorId(id);
+    if (evento) {
+        eventoEditId = id;
+        
+        document.getElementById('eventoNombre').value = evento.nombre;
+        document.getElementById('eventoFechaInicio').value = fechaParaInput(evento.fecha_inicio);
+        document.getElementById('eventoFechaFin').value = fechaParaInput(evento.fecha_fin);
+        document.getElementById('eventoLugar').value = evento.lugar;
+        document.getElementById('eventoDescripcion').value = evento.descripcion || '';
+        document.getElementById('eventoCupo').value = evento.cupo_maximo;
+        
+        const btn = document.getElementById('eventoGuardarBtn');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-save me-2"></i>Actualizar Evento';
+        }
+        
+        document.querySelector('.card-custom')?.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+/** Guardar evento (decide entre agregar o actualizar) */
+async function guardarEvento() {
+    if (eventoEditId !== null) {
+        await actualizarEvento(eventoEditId);
+    } else {
+        await agregarEvento();
+    }
+}
+
+/** Eliminar evento (DELETE) */
 async function eliminarEvento(id) {
     if (!confirm('¿Eliminar este evento? Se eliminarán también las actividades asociadas.')) return;
     try {
@@ -240,29 +291,39 @@ async function eliminarEvento(id) {
     }
 }
 
+/** Renderizar tabla de eventos */
 async function renderizarEventos() {
     const eventos = await obtenerEventos();
     const tbody = document.getElementById('eventosBody');
     if (tbody) {
         tbody.innerHTML = '';
-        eventos.forEach(e => {
+        if (eventos.length === 0) {
             const row = tbody.insertRow();
-            row.insertCell(0).innerHTML = `<span class="badge-id">#${e.id_evento}</span>`;
-            row.insertCell(1).textContent = e.nombre;
-            row.insertCell(2).textContent = formatearFecha(e.fecha_inicio);
-            row.insertCell(3).textContent = e.lugar;
-            row.insertCell(4).textContent = e.cupo_maximo;
-            row.insertCell(5).innerHTML = `
-                <button class="btn btn-sm btn-danger" onclick="eliminarEvento(${e.id_evento})"><i class="fas fa-trash-alt"></i></button>
-            `;
-        });
+            row.insertCell(0).colSpan = 6;
+            row.insertCell(0).textContent = "No hay eventos registrados";
+            row.classList.add('text-center', 'text-muted');
+        } else {
+            eventos.forEach(e => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = `<span class="badge-id">#${e.id_evento}</span>`;
+                row.insertCell(1).textContent = e.nombre;
+                row.insertCell(2).textContent = formatearFecha(e.fecha_inicio);
+                row.insertCell(3).textContent = e.lugar;
+                row.insertCell(4).textContent = e.cupo_maximo;
+                row.insertCell(5).innerHTML = `
+                    <button class="btn btn-sm btn-warning me-1" onclick="editarEvento(${e.id_evento})"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="eliminarEvento(${e.id_evento})"><i class="fas fa-trash-alt"></i></button>
+                `;
+            });
+        }
     }
 }
 
 // ============================================
-// ================ PARTICIPANTES =============
+// PARTICIPANTES - CRUD completo
 // ============================================
 
+/** Obtener todos los participantes */
 async function obtenerParticipantes() {
     try {
         const response = await fetch(`${API_URL}/participantes`);
@@ -274,6 +335,19 @@ async function obtenerParticipantes() {
     }
 }
 
+/** Obtener un participante por ID */
+async function obtenerParticipantePorId(id) {
+    try {
+        const response = await fetch(`${API_URL}/participantes/${id}`);
+        if (!response.ok) throw new Error('Participante no encontrado');
+        return await response.json();
+    } catch (error) {
+        console.error('Error obtenerParticipantePorId:', error);
+        return null;
+    }
+}
+
+/** Agregar un nuevo participante */
 async function agregarParticipante() {
     const nombre = document.getElementById('partNombre')?.value;
     const email = document.getElementById('partEmail')?.value;
@@ -305,17 +379,7 @@ async function agregarParticipante() {
     }
 }
 
-async function obtenerParticipantePorId(id) {
-    try {
-        const response = await fetch(`${API_URL}/participantes/${id}`);
-        if (!response.ok) throw new Error('Participante no encontrado');
-        return await response.json();
-    } catch (error) {
-        console.error('Error obtenerParticipantePorId:', error);
-        return null;
-    }
-}
-
+/** Actualizar un participante existente */
 async function actualizarParticipante(id) {
     const nombre = document.getElementById('partNombre')?.value;
     const email = document.getElementById('partEmail')?.value;
@@ -340,6 +404,7 @@ async function actualizarParticipante(id) {
         document.getElementById('partNombre').value = '';
         document.getElementById('partEmail').value = '';
         document.getElementById('partHabilidades').value = '';
+        
         const btnGuardar = document.getElementById('partGuardarBtn');
         if (btnGuardar) btnGuardar.innerHTML = '<i class="fas fa-user-plus me-2"></i>Agregar Participante';
         const btnCancelar = document.getElementById('partCancelarBtn');
@@ -352,6 +417,7 @@ async function actualizarParticipante(id) {
     }
 }
 
+/** Editar participante (cargar datos en formulario) */
 async function editarParticipante(id) {
     const participante = await obtenerParticipantePorId(id);
     if (!participante) return;
@@ -369,6 +435,7 @@ async function editarParticipante(id) {
     document.querySelector('.card-custom')?.scrollIntoView({ behavior: 'smooth' });
 }
 
+/** Cancelar edición de participante */
 function cancelarEdicionParticipante() {
     participanteEditId = null;
     document.getElementById('partNombre').value = '';
@@ -380,6 +447,7 @@ function cancelarEdicionParticipante() {
     if (btnCancelar) btnCancelar.style.display = 'none';
 }
 
+/** Guardar participante (decide entre agregar o actualizar) */
 async function guardarParticipante() {
     if (participanteEditId !== null) {
         await actualizarParticipante(participanteEditId);
@@ -388,6 +456,7 @@ async function guardarParticipante() {
     }
 }
 
+/** Eliminar participante */
 async function eliminarParticipante(id) {
     if (!confirm('¿Eliminar este participante?')) return;
     try {
@@ -400,29 +469,38 @@ async function eliminarParticipante(id) {
     }
 }
 
+/** Renderizar tabla de participantes */
 async function renderizarParticipantes() {
     const participantes = await obtenerParticipantes();
     const tbody = document.getElementById('participantesBody');
     if (tbody) {
         tbody.innerHTML = '';
-        participantes.forEach(p => {
+        if (participantes.length === 0) {
             const row = tbody.insertRow();
-            row.insertCell(0).innerHTML = `<span class="badge-id">#${p.id_part}</span>`;
-            row.insertCell(1).textContent = p.nombre;
-            row.insertCell(2).textContent = p.email;
-            row.insertCell(3).textContent = p.habilidades || '-';
-            row.insertCell(4).innerHTML = `
-                <button class="btn btn-sm btn-warning me-1" onclick="editarParticipante(${p.id_part})"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="eliminarParticipante(${p.id_part})"><i class="fas fa-trash-alt"></i></button>
-            `;
-        });
+            row.insertCell(0).colSpan = 5;
+            row.insertCell(0).textContent = "No hay participantes registrados";
+            row.classList.add('text-center', 'text-muted');
+        } else {
+            participantes.forEach(p => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = `<span class="badge-id">#${p.id_part}</span>`;
+                row.insertCell(1).textContent = p.nombre;
+                row.insertCell(2).textContent = p.email;
+                row.insertCell(3).textContent = p.habilidades || '-';
+                row.insertCell(4).innerHTML = `
+                    <button class="btn btn-sm btn-warning me-1" onclick="editarParticipante(${p.id_part})"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="eliminarParticipante(${p.id_part})"><i class="fas fa-trash-alt"></i></button>
+                `;
+            });
+        }
     }
 }
 
 // ============================================
-// ================= EQUIPOS ==================
+// EQUIPOS - CRUD completo
 // ============================================
 
+/** Obtener todos los equipos */
 async function obtenerEquipos() {
     try {
         const response = await fetch(`${API_URL}/equipos`);
@@ -434,6 +512,7 @@ async function obtenerEquipos() {
     }
 }
 
+/** Obtener un equipo por ID */
 async function obtenerEquipoPorId(id) {
     try {
         const response = await fetch(`${API_URL}/equipos/${id}`);
@@ -445,6 +524,7 @@ async function obtenerEquipoPorId(id) {
     }
 }
 
+/** Cargar eventos en el select de equipos */
 async function cargarSelectEventos() {
     const eventos = await obtenerEventos();
     const select = document.getElementById('equipoEventoId');
@@ -456,13 +536,12 @@ async function cargarSelectEventos() {
     }
 }
 
+/** Agregar un nuevo equipo */
 async function agregarEquipo() {
     const nombre = document.getElementById('equipoNombre')?.value;
     const id_evento = document.getElementById('equipoEventoId')?.value;
     const miembrosTexto = document.getElementById('equipoMiembros')?.value;
-    const miembros = miembrosTexto?.trim()
-        ? miembrosTexto.split(',').map(m => parseInt(m.trim(), 10))
-        : [];
+    const miembros = miembrosTexto?.trim() ? miembrosTexto.split(',').map(m => parseInt(m.trim(), 10)) : [];
 
     if (!nombre?.trim()) return mostrarMensaje("Nombre obligatorio", true);
     if (!id_evento) return mostrarMensaje("Seleccione un evento", true);
@@ -491,13 +570,12 @@ async function agregarEquipo() {
     }
 }
 
+/** Actualizar un equipo existente */
 async function actualizarEquipo(id) {
     const nombre = document.getElementById('equipoNombre')?.value;
     const id_evento = document.getElementById('equipoEventoId')?.value;
     const miembrosTexto = document.getElementById('equipoMiembros')?.value;
-    const miembros = miembrosTexto?.trim()
-        ? miembrosTexto.split(',').map(m => parseInt(m.trim(), 10))
-        : [];
+    const miembros = miembrosTexto?.trim() ? miembrosTexto.split(',').map(m => parseInt(m.trim(), 10)) : [];
 
     if (!nombre?.trim()) return mostrarMensaje("Nombre obligatorio", true);
     if (!id_evento) return mostrarMensaje("Seleccione un evento", true);
@@ -530,6 +608,7 @@ async function actualizarEquipo(id) {
     }
 }
 
+/** Editar equipo (cargar datos en formulario) */
 async function editarEquipo(id) {
     const equipo = await obtenerEquipoPorId(id);
     if (!equipo) return;
@@ -537,10 +616,8 @@ async function editarEquipo(id) {
     equipoEditId = id;
     document.getElementById('equipoNombre').value = equipo.nombre || '';
     document.getElementById('equipoEventoId').value = equipo.id_evento || '';
-    document.getElementById('equipoMiembros').value = (equipo.miembros || []).map(miembro => {
-        if (typeof miembro === 'object') return miembro.id ?? miembro.id_participante ?? '';
-        return miembro;
-    }).filter(Boolean).join(', ');
+    const miembrosIds = (equipo.miembros || []).map(m => m.id || m).filter(Boolean);
+    document.getElementById('equipoMiembros').value = miembrosIds.join(', ');
 
     const btnGuardar = document.getElementById('equipoGuardarBtn');
     if (btnGuardar) btnGuardar.innerHTML = '<i class="fas fa-save me-2"></i>Actualizar Equipo';
@@ -550,6 +627,7 @@ async function editarEquipo(id) {
     document.querySelector('.card-custom')?.scrollIntoView({ behavior: 'smooth' });
 }
 
+/** Cancelar edición de equipo */
 function cancelarEdicionEquipo() {
     equipoEditId = null;
     limpiarFormularioEquipo();
@@ -559,6 +637,7 @@ function cancelarEdicionEquipo() {
     if (btnCancelar) btnCancelar.style.display = 'none';
 }
 
+/** Guardar equipo (decide entre agregar o actualizar) */
 async function guardarEquipo() {
     if (equipoEditId !== null) {
         await actualizarEquipo(equipoEditId);
@@ -567,6 +646,7 @@ async function guardarEquipo() {
     }
 }
 
+/** Eliminar equipo */
 async function eliminarEquipo(id) {
     if (!confirm('¿Eliminar este equipo? También se eliminará su proyecto asociado.')) return;
     try {
@@ -581,6 +661,7 @@ async function eliminarEquipo(id) {
     }
 }
 
+/** Renderizar tabla de equipos */
 async function renderizarEquipos() {
     const equipos = await obtenerEquipos();
     const tbody = document.getElementById('equiposBody');
@@ -596,8 +677,8 @@ async function renderizarEquipos() {
                 const row = tbody.insertRow();
                 row.insertCell(0).innerHTML = `<span class="badge-id">#${eq.id_equipo}</span>`;
                 row.insertCell(1).textContent = eq.nombre;
-                row.insertCell(2).innerHTML = `<span class="badge-id">Evento ${eq.id_evento}</span>`;
-                
+                const eventoTexto = eq.evento_nombre || eq.evento || (eq.id_evento ? `Evento ${eq.id_evento}` : '-');
+                row.insertCell(2).textContent = eventoTexto;
                 const miembros = eq.miembros || [];
                 let miembrosTexto = '';
                 if (miembros.length > 0) {
@@ -608,10 +689,9 @@ async function renderizarEquipos() {
                     }
                 }
                 row.insertCell(3).textContent = miembrosTexto || '-';
-                
                 row.insertCell(4).innerHTML = `
-                    <button class="btn btn-sm btn-warning me-1" onclick="editarEquipo(${eq.id_equipo})"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-danger" onclick="eliminarEquipo(${eq.id_equipo})"><i class="fas fa-trash-alt"></i></button>
+                    <button class="btn-icon btn-edit me-2" onclick="editarEquipo(${eq.id_equipo})" title="Editar equipo"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon btn-delete" onclick="eliminarEquipo(${eq.id_equipo})" title="Eliminar equipo"><i class="fas fa-trash-alt"></i></button>
                 `;
             });
         }
@@ -619,9 +699,10 @@ async function renderizarEquipos() {
 }
 
 // ============================================
-// ================= PROYECTOS ================
+// PROYECTOS - CRUD completo
 // ============================================
 
+/** Obtener todos los proyectos */
 async function obtenerProyectos() {
     try {
         const response = await fetch(`${API_URL}/proyectos`);
@@ -633,6 +714,7 @@ async function obtenerProyectos() {
     }
 }
 
+/** Cargar equipos en el select de proyectos */
 async function cargarSelectEquipos() {
     const equipos = await obtenerEquipos();
     const select = document.getElementById('proyectoEquipoId');
@@ -644,6 +726,7 @@ async function cargarSelectEquipos() {
     }
 }
 
+/** Agregar un nuevo proyecto */
 async function agregarProyecto() {
     const nombre = document.getElementById('proyectoNombre')?.value;
     const descripcion = document.getElementById('proyectoDescripcion')?.value;
@@ -671,6 +754,7 @@ async function agregarProyecto() {
         document.getElementById('proyectoDescripcion').value = '';
         document.getElementById('proyectoTecnologias').value = '';
         document.getElementById('proyectoRepo').value = '';
+        document.getElementById('proyectoEquipoId').value = '';
 
         await renderizarProyectos();
     } catch (error) {
@@ -678,6 +762,100 @@ async function agregarProyecto() {
     }
 }
 
+/** Obtener un proyecto por ID */
+async function obtenerProyectoPorId(id) {
+    try {
+        const response = await fetch(`${API_URL}/proyectos/${id}`);
+        if (!response.ok) throw new Error('Error al cargar proyecto');
+        return await response.json();
+    } catch (error) {
+        console.error('Error obtenerProyectoPorId:', error);
+        return null;
+    }
+}
+
+/** Actualizar un proyecto existente */
+async function actualizarProyecto(id) {
+    const nombre = document.getElementById('proyectoNombre')?.value;
+    const descripcion = document.getElementById('proyectoDescripcion')?.value;
+    const tecnologias = document.getElementById('proyectoTecnologias')?.value;
+    const repo_url = document.getElementById('proyectoRepo')?.value;
+    const id_equipo = document.getElementById('proyectoEquipoId')?.value;
+
+    if (!nombre?.trim()) return mostrarMensaje("Nombre del proyecto obligatorio", true);
+    if (!descripcion?.trim()) return mostrarMensaje("Descripción obligatoria", true);
+    if (!tecnologias?.trim()) return mostrarMensaje("Tecnologías obligatorias", true);
+    if (!repo_url?.trim()) return mostrarMensaje("Repositorio obligatorio", true);
+    if (!id_equipo) return mostrarMensaje("Seleccione un equipo", true);
+
+    try {
+        const response = await fetch(`${API_URL}/proyectos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, descripcion, tecnologias, repo_url, id_equipo: parseInt(id_equipo), estado: 'registrado' })
+        });
+
+        if (!response.ok) throw new Error('Error al actualizar proyecto');
+
+        mostrarMensaje('Proyecto actualizado correctamente');
+        proyectoEditId = null;
+        document.getElementById('proyectoNombre').value = '';
+        document.getElementById('proyectoDescripcion').value = '';
+        document.getElementById('proyectoTecnologias').value = '';
+        document.getElementById('proyectoRepo').value = '';
+        document.getElementById('proyectoEquipoId').value = '';
+        const btnGuardar = document.getElementById('proyectoGuardarBtn');
+        if (btnGuardar) btnGuardar.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Registrar Proyecto';
+        const btnCancelar = document.getElementById('proyectoCancelarBtn');
+        if (btnCancelar) btnCancelar.style.display = 'none';
+
+        await renderizarProyectos();
+    } catch (error) {
+        mostrarMensaje('Error al actualizar proyecto', true);
+    }
+}
+
+/** Cargar proyecto en el formulario para editar */
+async function editarProyecto(id) {
+    const proyecto = await obtenerProyectoPorId(id);
+    if (!proyecto) return;
+
+    proyectoEditId = id;
+    document.getElementById('proyectoNombre').value = proyecto.nombre || '';
+    document.getElementById('proyectoDescripcion').value = proyecto.descripcion || '';
+    document.getElementById('proyectoTecnologias').value = proyecto.tecnologias || '';
+    document.getElementById('proyectoRepo').value = proyecto.repo_url || '';
+    document.getElementById('proyectoEquipoId').value = proyecto.id_equipo || '';
+    const btnGuardar = document.getElementById('proyectoGuardarBtn');
+    if (btnGuardar) btnGuardar.innerHTML = '<i class="fas fa-save me-2"></i>Actualizar Proyecto';
+    const btnCancelar = document.getElementById('proyectoCancelarBtn');
+    if (btnCancelar) btnCancelar.style.display = 'inline-flex';
+}
+
+/** Cancelar edición de proyecto */
+function cancelarEdicionProyecto() {
+    proyectoEditId = null;
+    document.getElementById('proyectoNombre').value = '';
+    document.getElementById('proyectoDescripcion').value = '';
+    document.getElementById('proyectoTecnologias').value = '';
+    document.getElementById('proyectoRepo').value = '';
+    document.getElementById('proyectoEquipoId').value = '';
+    const btnGuardar = document.getElementById('proyectoGuardarBtn');
+    if (btnGuardar) btnGuardar.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Registrar Proyecto';
+    const btnCancelar = document.getElementById('proyectoCancelarBtn');
+    if (btnCancelar) btnCancelar.style.display = 'none';
+}
+
+/** Guardar proyecto (agregar o actualizar) */
+async function guardarProyecto() {
+    if (proyectoEditId !== null) {
+        await actualizarProyecto(proyectoEditId);
+    } else {
+        await agregarProyecto();
+    }
+}
+
+/** Renderizar tabla de proyectos */
 async function renderizarProyectos() {
     const proyectos = await obtenerProyectos();
     const tbody = document.getElementById('proyectosBody');
@@ -695,6 +873,7 @@ async function renderizarProyectos() {
                 row.insertCell(2).textContent = p.tecnologias || '-';
                 row.insertCell(3).textContent = p.equipo_nombre || '-';
                 row.insertCell(4).innerHTML = `
+                    <button class="btn btn-sm btn-warning me-1" onclick="editarProyecto(${p.id_proy})"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-sm btn-danger" onclick="eliminarProyecto(${p.id_proy})"><i class="fas fa-trash-alt"></i></button>
                 `;
             });
@@ -702,6 +881,7 @@ async function renderizarProyectos() {
     }
 }
 
+/** Eliminar proyecto */
 async function eliminarProyecto(id) {
     if (!confirm('¿Eliminar este proyecto? También se eliminarán sus avances.')) return;
     try {
@@ -714,9 +894,10 @@ async function eliminarProyecto(id) {
 }
 
 // ============================================
-// ================ EVALUACIONES ==============
+// EVALUACIONES - CRUD completo con edición
 // ============================================
 
+/** Obtener todas las evaluaciones */
 async function obtenerEvaluaciones() {
     try {
         const response = await fetch(`${API_URL}/evaluaciones`);
@@ -728,6 +909,7 @@ async function obtenerEvaluaciones() {
     }
 }
 
+/** Obtener una evaluación por ID */
 async function obtenerEvaluacionPorId(id) {
     try {
         const response = await fetch(`${API_URL}/evaluaciones/${id}`);
@@ -739,6 +921,7 @@ async function obtenerEvaluacionPorId(id) {
     }
 }
 
+/** Cargar proyectos en el select de evaluaciones */
 async function actualizarSelectProyectosEvaluacion() {
     const proyectos = await obtenerProyectos();
     const select = document.getElementById('evaluacionProyectoId');
@@ -750,28 +933,18 @@ async function actualizarSelectProyectosEvaluacion() {
     }
 }
 
+/** Guardar evaluación (POST o PUT según modo) */
 async function guardarEvaluacion() {
     const proyectoId = parseInt(document.getElementById('evaluacionProyectoId')?.value, 10);
     const juez = document.getElementById('evaluacionJuez')?.value;
-    const innovacionInput = document.getElementById('evaluacionInnovacion')?.value;
-    const complejidadInput = document.getElementById('evaluacionComplejidad')?.value;
-    const presentacionInput = document.getElementById('evaluacionPresentacion')?.value;
-    const impactoInput = document.getElementById('evaluacionImpacto')?.value;
+    const innovacion = Number(document.getElementById('evaluacionInnovacion')?.value);
+    const complejidad = Number(document.getElementById('evaluacionComplejidad')?.value);
+    const presentacion = Number(document.getElementById('evaluacionPresentacion')?.value);
+    const impacto = Number(document.getElementById('evaluacionImpacto')?.value);
     const comentarios = document.getElementById('evaluacionComentarios')?.value;
 
     if (!proyectoId) return mostrarMensaje('Seleccione un proyecto', true);
     if (!juez?.trim()) return mostrarMensaje('Nombre del juez es obligatorio', true);
-    
-    if (innovacionInput === '' || innovacionInput === null) return mostrarMensaje('Innovación es obligatorio', true);
-    if (complejidadInput === '' || complejidadInput === null) return mostrarMensaje('Complejidad es obligatorio', true);
-    if (presentacionInput === '' || presentacionInput === null) return mostrarMensaje('Presentación es obligatorio', true);
-    if (impactoInput === '' || impactoInput === null) return mostrarMensaje('Impacto es obligatorio', true);
-
-    const innovacion = Number(innovacionInput);
-    const complejidad = Number(complejidadInput);
-    const presentacion = Number(presentacionInput);
-    const impacto = Number(impactoInput);
-
     if (isNaN(innovacion) || innovacion < 0 || innovacion > 100) return mostrarMensaje('Innovación debe estar entre 0 y 100', true);
     if (isNaN(complejidad) || complejidad < 0 || complejidad > 100) return mostrarMensaje('Complejidad debe estar entre 0 y 100', true);
     if (isNaN(presentacion) || presentacion < 0 || presentacion > 100) return mostrarMensaje('Presentación debe estar entre 0 y 100', true);
@@ -813,13 +986,11 @@ async function guardarEvaluacion() {
         await renderizarEvaluaciones();
         await renderizarResultados();
     } catch (error) {
-        const message = error.message === 'Failed to fetch'
-            ? 'No se puede conectar con el servidor. Asegúrate de iniciar backend en http://localhost:3000'
-            : error.message || 'Error al guardar evaluación';
-        mostrarMensaje(message, true);
+        mostrarMensaje(error.message, true);
     }
 }
 
+/** Editar evaluación (cargar datos en formulario) */
 async function editarEvaluacion(id) {
     const evaluacion = await obtenerEvaluacionPorId(id);
     if (!evaluacion) {
@@ -842,13 +1013,12 @@ async function editarEvaluacion(id) {
         btnGuardar.innerHTML = '<i class="fas fa-save me-2"></i>Actualizar Evaluación';
     }
     const btnCancelar = document.getElementById('btnCancelarEdicion');
-    if (btnCancelar) {
-        btnCancelar.style.display = 'inline-flex';
-    }
+    if (btnCancelar) btnCancelar.style.display = 'inline-flex';
     
     document.querySelector('.card-custom')?.scrollIntoView({ behavior: 'smooth' });
 }
 
+/** Cancelar edición de evaluación */
 function cancelarEdicionEvaluacion() {
     evaluacionEditId = null;
     
@@ -865,11 +1035,10 @@ function cancelarEdicionEvaluacion() {
         btnGuardar.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Evaluación';
     }
     const btnCancelar = document.getElementById('btnCancelarEdicion');
-    if (btnCancelar) {
-        btnCancelar.style.display = 'none';
-    }
+    if (btnCancelar) btnCancelar.style.display = 'none';
 }
 
+/** Eliminar evaluación */
 async function eliminarEvaluacion(id) {
     if (!confirm('¿Eliminar esta evaluación?')) return;
     try {
@@ -883,6 +1052,7 @@ async function eliminarEvaluacion(id) {
     }
 }
 
+/** Renderizar lista de evaluaciones */
 async function renderizarEvaluaciones() {
     const evaluaciones = await obtenerEvaluaciones();
     const container = document.getElementById('evaluacionesBody');
@@ -912,21 +1082,25 @@ async function renderizarEvaluaciones() {
         `;
         container.appendChild(row);
     });
+    await renderizarRanking();
 }
 
+/** Renderizar resultados (ranking) */
 async function renderizarResultados() {
     await renderizarRanking();
 }
 
+/** Publicar resultados */
 async function publicarResultados() {
     await renderizarResultados();
     mostrarMensaje('Resultados publicados correctamente');
 }
 
 // ============================================
-// ================= MENTORES =================
+// MENTORES - CRUD completo y asignaciones
 // ============================================
 
+/** Obtener todos los mentores */
 async function obtenerMentores() {
     try {
         const response = await fetch(`${API_URL}/mentores`);
@@ -938,25 +1112,31 @@ async function obtenerMentores() {
     }
 }
 
-function resetFormularioMentor() {
-    mentorEditId = null;
-    const button = document.getElementById('mentorGuardarBtn');
-    const cancelBtn = document.getElementById('mentorCancelarBtn');
-    if (button) button.textContent = 'Agregar Mentor';
-    if (cancelBtn) cancelBtn.classList.add('d-none');
-    document.getElementById('mentorNombre').value = '';
-    document.getElementById('mentorEmail').value = '';
-    document.getElementById('mentorEspecialidad').value = '';
-    document.getElementById('mentorTelefono').value = '';
-}
-
-async function guardarMentor() {
-    if (mentorEditId !== null) {
-        return actualizarMentor();
+/** Cargar mentores en el select de asignación */
+async function cargarSelectMentores() {
+    const mentores = await obtenerMentores();
+    const select = document.getElementById('asignacionMentorId');
+    if (select) {
+        select.innerHTML = '<option value="">Seleccione un mentor</option>';
+        mentores.forEach(m => {
+            select.innerHTML += `<option value="${m.id_mentor}">${m.nombre} (${m.especialidad || 'Sin especialidad'})</option>`;
+        });
     }
-    return agregarMentor();
 }
 
+/** Cargar equipos en el select de asignación */
+async function cargarSelectEquiposAsignacion() {
+    const equipos = await obtenerEquipos();
+    const select = document.getElementById('asignacionEquipoId');
+    if (select) {
+        select.innerHTML = '<option value="">Seleccione un equipo</option>';
+        equipos.forEach(e => {
+            select.innerHTML += `<option value="${e.id_equipo}">${e.nombre}</option>`;
+        });
+    }
+}
+
+/** Agregar un nuevo mentor */
 async function agregarMentor() {
     const nombre = document.getElementById('mentorNombre')?.value;
     const email = document.getElementById('mentorEmail')?.value;
@@ -980,55 +1160,47 @@ async function agregarMentor() {
         mostrarMensaje('Mentor agregado correctamente');
         resetFormularioMentor();
         await renderizarMentores();
-        if (typeof cargarSelectMentores === 'function') await cargarSelectMentores();
+        await cargarSelectMentores();
     } catch (error) {
         mostrarMensaje('Error al agregar mentor', true);
     }
 }
 
-async function actualizarMentor() {
-    const nombre = document.getElementById('mentorNombre')?.value;
-    const email = document.getElementById('mentorEmail')?.value;
-    const especialidad = document.getElementById('mentorEspecialidad')?.value;
-    const telefono = document.getElementById('mentorTelefono')?.value;
-
-    if (!nombre?.trim()) return mostrarMensaje("Nombre obligatorio", true);
-    if (!email?.trim()) return mostrarMensaje("Email obligatorio", true);
-    if (!especialidad?.trim()) return mostrarMensaje("Especialidad obligatoria", true);
-    if (!telefono?.trim()) return mostrarMensaje("Teléfono obligatorio", true);
-
-    try {
-        const response = await fetch(`${API_URL}/mentores/${mentorEditId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, email, especialidad, telefono })
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.json().catch(() => null);
-            throw new Error(errorBody?.error || 'Error al actualizar mentor');
+/** Renderizar tabla de mentores */
+async function renderizarMentores() {
+    const mentores = await obtenerMentores();
+    const tbody = document.getElementById('mentoresBody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        if (mentores.length === 0) {
+            const row = tbody.insertRow();
+            row.insertCell(0).colSpan = 6;
+            row.insertCell(0).textContent = "No hay mentores registrados";
+            row.classList.add('text-center', 'text-muted');
+        } else {
+            mentores.forEach(m => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = `<span class="badge-id">#${m.id_mentor}</span>`;
+                row.insertCell(1).textContent = m.nombre;
+                row.insertCell(2).textContent = m.email;
+                row.insertCell(3).textContent = m.especialidad || '-';
+                row.insertCell(4).textContent = m.telefono || '-';
+                row.insertCell(5).innerHTML = `
+                    <button class="btn btn-sm btn-warning me-1" onclick="editarMentor(${m.id_mentor})"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="eliminarMentor(${m.id_mentor})"><i class="fas fa-trash-alt"></i></button>
+                `;
+            });
         }
-
-        mostrarMensaje('Mentor actualizado correctamente');
-        resetFormularioMentor();
-        await renderizarMentores();
-        if (typeof cargarSelectMentores === 'function') await cargarSelectMentores();
-    } catch (error) {
-        mostrarMensaje(error.message || 'Error al actualizar mentor', true);
     }
 }
 
-function cancelarEdicionMentor() {
-    resetFormularioMentor();
-}
-
+/** Editar mentor */
 async function editarMentor(id) {
-    const mentorId = parseInt(id, 10);
     const mentores = await obtenerMentores();
-    const mentor = mentores.find(m => m.id_mentor === mentorId);
+    const mentor = mentores.find(m => m.id_mentor === id);
     if (!mentor) return mostrarMensaje('Mentor no encontrado', true);
 
-    mentorEditId = mentorId;
+    mentorEditId = id;
     document.getElementById('mentorNombre').value = mentor.nombre || '';
     document.getElementById('mentorEmail').value = mentor.email || '';
     document.getElementById('mentorEspecialidad').value = mentor.especialidad || '';
@@ -1040,48 +1212,72 @@ async function editarMentor(id) {
     if (cancelBtn) cancelBtn.classList.remove('d-none');
 }
 
-async function renderizarMentores() {
-    const mentores = await obtenerMentores();
-    const tbody = document.getElementById('mentoresBody');
-    if (tbody) {
-        tbody.innerHTML = '';
-        mentores.forEach(m => {
-            const row = tbody.insertRow();
-            row.insertCell(0).innerHTML = `<span class="badge-id">#${m.id_mentor}</span>`;
-            row.insertCell(1).textContent = m.nombre;
-            row.insertCell(2).textContent = m.email;
-            row.insertCell(3).textContent = m.especialidad || '-';
-            row.insertCell(4).textContent = m.telefono || '-';
-            row.insertCell(5).innerHTML = `
-                <button class="btn btn-sm btn-warning me-1" onclick="editarMentor(${m.id_mentor})"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="eliminarMentor(${m.id_mentor})"><i class="fas fa-trash-alt"></i></button>
-            `;
-        });
+/** Guardar mentor (agregar o actualizar) */
+async function guardarMentor() {
+    if (mentorEditId !== null) {
+        await actualizarMentor();
+    } else {
+        await agregarMentor();
     }
 }
 
-async function cargarSelectMentores() {
-    const mentores = await obtenerMentores();
-    const select = document.getElementById('asignacionMentorId');
-    if (select) {
-        select.innerHTML = '<option value="">Seleccione un mentor</option>';
-        mentores.forEach(m => {
-            select.innerHTML += `<option value="${m.id_mentor}">${m.nombre} (${m.especialidad || 'Sin especialidad'})</option>`;
+/** Actualizar mentor existente */
+async function actualizarMentor() {
+    const nombre = document.getElementById('mentorNombre')?.value;
+    const email = document.getElementById('mentorEmail')?.value;
+    const especialidad = document.getElementById('mentorEspecialidad')?.value;
+    const telefono = document.getElementById('mentorTelefono')?.value;
+
+    try {
+        const response = await fetch(`${API_URL}/mentores/${mentorEditId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, email, especialidad, telefono })
         });
+
+        if (!response.ok) throw new Error('Error al actualizar mentor');
+
+        mostrarMensaje('Mentor actualizado correctamente');
+        resetFormularioMentor();
+        await renderizarMentores();
+        await cargarSelectMentores();
+        mentorEditId = null;
+    } catch (error) {
+        mostrarMensaje(error.message, true);
     }
 }
 
-async function cargarSelectEquiposAsignacion() {
-    const equipos = await obtenerEquipos();
-    const select = document.getElementById('asignacionEquipoId');
-    if (select) {
-        select.innerHTML = '<option value="">Seleccione un equipo</option>';
-        equipos.forEach(e => {
-            select.innerHTML += `<option value="${e.id_equipo}">${e.nombre}</option>`;
-        });
+/** Cancelar edición de mentor */
+function cancelarEdicionMentor() {
+    resetFormularioMentor();
+}
+
+function resetFormularioMentor() {
+    mentorEditId = null;
+    document.getElementById('mentorNombre').value = '';
+    document.getElementById('mentorEmail').value = '';
+    document.getElementById('mentorEspecialidad').value = '';
+    document.getElementById('mentorTelefono').value = '';
+    const button = document.getElementById('mentorGuardarBtn');
+    const cancelBtn = document.getElementById('mentorCancelarBtn');
+    if (button) button.textContent = 'Agregar Mentor';
+    if (cancelBtn) cancelBtn.classList.add('d-none');
+}
+
+/** Eliminar mentor */
+async function eliminarMentor(id) {
+    if (!confirm('¿Eliminar este mentor?')) return;
+    try {
+        await fetch(`${API_URL}/mentores/${id}`, { method: 'DELETE' });
+        mostrarMensaje('Mentor eliminado');
+        await renderizarMentores();
+        await cargarSelectMentores();
+    } catch (error) {
+        mostrarMensaje('Error al eliminar mentor', true);
     }
 }
 
+/** Renderizar asignaciones de mentores a equipos */
 async function renderizarAsignaciones() {
     const equipos = await obtenerEquipos();
     const mentores = await obtenerMentores();
@@ -1109,11 +1305,10 @@ async function renderizarAsignaciones() {
     }
 }
 
+/** Asignar mentor a equipo */
 async function asignarMentorEquipo() {
-    const mentorIdValue = document.getElementById('asignacionMentorId')?.value;
-    const equipoIdValue = document.getElementById('asignacionEquipoId')?.value;
-    const mentorId = mentorIdValue ? parseInt(mentorIdValue, 10) : null;
-    const equipoId = equipoIdValue ? parseInt(equipoIdValue, 10) : null;
+    const mentorId = parseInt(document.getElementById('asignacionMentorId')?.value, 10);
+    const equipoId = parseInt(document.getElementById('asignacionEquipoId')?.value, 10);
 
     if (!mentorId) return mostrarMensaje('Seleccione un mentor', true);
     if (!equipoId) return mostrarMensaje('Seleccione un equipo', true);
@@ -1125,27 +1320,31 @@ async function asignarMentorEquipo() {
             body: JSON.stringify({ id_mentor: mentorId })
         });
 
-        if (!response.ok) {
-            const errorBody = await response.json().catch(() => null);
-            const message = errorBody?.error || 'Error al asignar mentor';
-            throw new Error(message);
-        }
+        if (!response.ok) throw new Error('Error al asignar mentor');
 
         mostrarMensaje('Mentor asignado al equipo');
-        asignacionEditId = null;
-        const button = document.getElementById('asignacionGuardarBtn');
-        const cancelBtn = document.getElementById('asignacionCancelarBtn');
-        if (button) button.textContent = 'Asignar Mentor';
-        if (cancelBtn) cancelBtn.classList.add('d-none');
         await renderizarAsignaciones();
-        if (typeof cargarSelectEquipos === 'function') await cargarSelectEquipos();
-        if (typeof cargarSelectMentores === 'function') await cargarSelectMentores();
-        if (typeof cargarSelectEquiposAsignacion === 'function') await cargarSelectEquiposAsignacion();
+        await cargarSelectEquiposAsignacion();
+        await cargarSelectMentores();
     } catch (error) {
-        mostrarMensaje(error.message || 'Error al asignar mentor', true);
+        mostrarMensaje(error.message, true);
     }
 }
 
+/** Editar asignación */
+function editarAsignacion(equipoId, mentorId) {
+    asignacionEditId = equipoId;
+    const mentorSelect = document.getElementById('asignacionMentorId');
+    const equipoSelect = document.getElementById('asignacionEquipoId');
+    if (mentorSelect) mentorSelect.value = mentorId || '';
+    if (equipoSelect) equipoSelect.value = equipoId;
+    const button = document.getElementById('asignacionGuardarBtn');
+    const cancelBtn = document.getElementById('asignacionCancelarBtn');
+    if (button) button.textContent = 'Actualizar asignación';
+    if (cancelBtn) cancelBtn.classList.remove('d-none');
+}
+
+/** Cancelar edición de asignación */
 function cancelarEdicionAsignacion() {
     asignacionEditId = null;
     const button = document.getElementById('asignacionGuardarBtn');
@@ -1158,33 +1357,11 @@ function cancelarEdicionAsignacion() {
     if (equipoSelect) equipoSelect.value = '';
 }
 
-function editarAsignacion(equipoId, mentorId) {
-    asignacionEditId = equipoId;
-    const mentorSelect = document.getElementById('asignacionMentorId');
-    const equipoSelect = document.getElementById('asignacionEquipoId');
-    const button = document.getElementById('asignacionGuardarBtn');
-    const cancelBtn = document.getElementById('asignacionCancelarBtn');
-    if (mentorSelect) mentorSelect.value = mentorId || '';
-    if (equipoSelect) equipoSelect.value = equipoId;
-    if (button) button.textContent = 'Actualizar asignación';
-    if (cancelBtn) cancelBtn.classList.remove('d-none');
-}
-
-async function eliminarMentor(id) {
-    if (!confirm('¿Eliminar este mentor?')) return;
-    try {
-        await fetch(`${API_URL}/mentores/${id}`, { method: 'DELETE' });
-        mostrarMensaje('Mentor eliminado');
-        await renderizarMentores();
-    } catch (error) {
-        mostrarMensaje('Error al eliminar mentor', true);
-    }
-}
-
 // ============================================
-// ================= RANKING ==================
+// RANKING - Cálculo de puntajes
 // ============================================
 
+/** Obtener ranking de proyectos */
 async function obtenerRanking() {
     try {
         const response = await fetch(`${API_URL}/ranking`);
@@ -1196,6 +1373,7 @@ async function obtenerRanking() {
     }
 }
 
+/** Renderizar ranking */
 async function renderizarRanking() {
     const ranking = await obtenerRanking();
     const tbody = document.getElementById('rankingBody') || document.getElementById('rankingResumenBody');
@@ -1203,8 +1381,9 @@ async function renderizarRanking() {
         tbody.innerHTML = '';
         if (ranking.length === 0) {
             const row = tbody.insertRow();
-            row.insertCell(0).colSpan = 4;
-            row.insertCell(0).textContent = "No hay evaluaciones registradas";
+            const cell = row.insertCell(0);
+            cell.colSpan = 4;
+            cell.textContent = "No hay evaluaciones registradas";
         } else {
             ranking.forEach((r, index) => {
                 const row = tbody.insertRow();
@@ -1221,9 +1400,10 @@ async function renderizarRanking() {
 }
 
 // ============================================
-// ================= ACTIVIDADES ==============
+// ACTIVIDADES - Cronograma
 // ============================================
 
+/** Obtener todas las actividades */
 async function obtenerActividades() {
     try {
         const response = await fetch(`${API_URL}/actividades`);
@@ -1235,6 +1415,7 @@ async function obtenerActividades() {
     }
 }
 
+/** Cargar eventos en el select del cronograma */
 async function actualizarSelectEventosCronograma() {
     const eventos = await obtenerEventos();
     const select = document.getElementById('actividadEventoId');
@@ -1246,6 +1427,7 @@ async function actualizarSelectEventosCronograma() {
     }
 }
 
+/** Agregar una actividad */
 async function agregarActividad() {
     const id_evento = document.getElementById('actividadEventoId')?.value;
     const nombre = document.getElementById('actividadNombre')?.value;
@@ -1258,8 +1440,17 @@ async function agregarActividad() {
     if (!fecha_hora) return mostrarMensaje('Fecha y hora son obligatorias', true);
 
     try {
-        const response = await fetch(`${API_URL}/actividades`, {
-            method: 'POST',
+        let url = `${API_URL}/actividades`;
+        let method = 'POST';
+        const editId = actividadEditId || document.getElementById('actividadEditId')?.value;
+
+        if (editId) {
+            url = `${API_URL}/actividades/${editId}`;
+            method = 'PUT';
+        }
+
+        const response = await fetch(url, {
+            method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 id_evento: parseInt(id_evento),
@@ -1270,21 +1461,78 @@ async function agregarActividad() {
             })
         });
 
-        if (!response.ok) throw new Error('Error al crear actividad');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.error || (editId ? 'Error al actualizar actividad' : 'Error al crear actividad'));
+        }
 
-        mostrarMensaje('Actividad agregada correctamente');
-        
+        mostrarMensaje(editId ? 'Actividad actualizada correctamente' : 'Actividad agregada correctamente');
+        cancelarEdicionActividad();
+
         document.getElementById('actividadNombre').value = '';
         document.getElementById('actividadDescripcion').value = '';
         document.getElementById('actividadFechaHora').value = '';
         document.getElementById('actividadUbicacion').value = '';
-        
+
         await renderizarCronograma();
     } catch (error) {
         mostrarMensaje(error.message, true);
     }
 }
 
+/** Obtener una actividad por id */
+async function obtenerActividadPorId(id) {
+    try {
+        const response = await fetch(`${API_URL}/actividades/${id}`);
+        if (!response.ok) throw new Error('Error al cargar actividad');
+        return await response.json();
+    } catch (error) {
+        console.error('Error obtenerActividadPorId:', error);
+        return null;
+    }
+}
+
+/** Editar actividad (cargar datos en el formulario) */
+async function editarActividad(id) {
+    const actividad = await obtenerActividadPorId(id);
+    if (!actividad) {
+        mostrarMensaje('No se pudo cargar la actividad', true);
+        return;
+    }
+
+    actividadEditId = id;
+    document.getElementById('actividadEditId').value = id;
+    document.getElementById('actividadEventoId').value = actividad.id_evento;
+    document.getElementById('actividadNombre').value = actividad.nombre || '';
+    document.getElementById('actividadDescripcion').value = actividad.descripcion || '';
+    document.getElementById('actividadFechaHora').value = actividad.fecha_hora || '';
+    document.getElementById('actividadUbicacion').value = actividad.ubicacion || '';
+
+    const btnGuardar = document.getElementById('btnGuardarActividad');
+    if (btnGuardar) btnGuardar.innerHTML = '<i class="fas fa-save me-2"></i>Actualizar Actividad';
+    const btnCancelar = document.getElementById('btnCancelarActividad');
+    if (btnCancelar) btnCancelar.style.display = 'inline-flex';
+}
+
+/** Cancelar edición de actividad */
+function cancelarEdicionActividad() {
+    actividadEditId = null;
+    const hiddenInput = document.getElementById('actividadEditId');
+    if (hiddenInput) hiddenInput.value = '';
+
+    document.getElementById('actividadEventoId').value = '';
+    document.getElementById('actividadNombre').value = '';
+    document.getElementById('actividadDescripcion').value = '';
+    document.getElementById('actividadFechaHora').value = '';
+    document.getElementById('actividadUbicacion').value = '';
+
+    const btnGuardar = document.getElementById('btnGuardarActividad');
+    if (btnGuardar) btnGuardar.innerHTML = '<i class="fas fa-save me-2"></i>Agregar Actividad';
+    const btnCancelar = document.getElementById('btnCancelarActividad');
+    if (btnCancelar) btnCancelar.style.display = 'none';
+}
+
+/** Eliminar actividad */
 async function eliminarActividad(id) {
     if (!confirm('¿Eliminar esta actividad?')) return;
     try {
@@ -1297,6 +1545,7 @@ async function eliminarActividad(id) {
     }
 }
 
+/** Renderizar cronograma */
 async function renderizarCronograma() {
     const actividades = await obtenerActividades();
     const tbody = document.getElementById('cronogramaBody');
@@ -1316,9 +1565,8 @@ async function renderizarCronograma() {
                 row.insertCell(3).textContent = new Date(act.fecha_hora).toLocaleString();
                 row.insertCell(4).textContent = act.ubicacion || '-';
                 row.insertCell(5).innerHTML = `
-                    <button class="btn btn-sm btn-danger" onclick="eliminarActividad(${act.id_actividad})">
-                        <i class="fas fa-trash-alt"></i> Eliminar
-                    </button>
+                    <button class="btn btn-sm btn-warning me-1" onclick="editarActividad(${act.id_actividad})"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="eliminarActividad(${act.id_actividad})"><i class="fas fa-trash-alt"></i></button>
                 `;
             });
         }
@@ -1326,36 +1574,15 @@ async function renderizarCronograma() {
 }
 
 // ============================================
-// ================= STATS ====================
+// HISTORIAL - Eventos pasados
 // ============================================
 
-async function actualizarStats() {
-    const eventos = await obtenerEventos();
-    const participantes = await obtenerParticipantes();
-    const equipos = await obtenerEquipos();
-    const proyectos = await obtenerProyectos();
-
-    const statsGrid = document.getElementById('statsGrid');
-    if (statsGrid) {
-        statsGrid.innerHTML = `
-            <div class="col-md-3"><div class="stats-card"><h3>${eventos.length}</h3><p><i class="fas fa-calendar-alt me-1"></i> Eventos</p></div></div>
-            <div class="col-md-3"><div class="stats-card"><h3>${participantes.length}</h3><p><i class="fas fa-users me-1"></i> Participantes</p></div></div>
-            <div class="col-md-3"><div class="stats-card"><h3>${equipos.length}</h3><p><i class="fas fa-user-friends me-1"></i> Equipos</p></div></div>
-            <div class="col-md-3"><div class="stats-card"><h3>${proyectos.length}</h3><p><i class="fas fa-project-diagram me-1"></i> Proyectos</p></div></div>
-        `;
-    }
-}
-
-// ============================================
-// ================ HISTORIAL =================
-// ============================================
-
+/** Renderizar historial (eventos pasados) */
 async function renderizarHistorial() {
     const eventos = await obtenerEventos();
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     
-    // MISMA LÓGICA que en el Dashboard
     const eventosPasados = eventos.filter(evento => {
         const fechaFin = new Date(evento.fecha_fin);
         return fechaFin < hoy;
@@ -1386,13 +1613,125 @@ async function renderizarHistorial() {
     }
 }
 
+/** Ver resultados de un evento pasado */
+async function verResultadosEvento(idEvento) {
+    const evento = await obtenerEventoPorId(idEvento);
+    const evaluaciones = await obtenerEvaluaciones();
+    const proyectos = await obtenerProyectos();
+    const equipos = await obtenerEquipos();
+    
+    const equiposEvento = equipos.filter(eq => eq.id_evento === idEvento);
+    const proyectosEvento = proyectos.filter(p => equiposEvento.some(eq => eq.id_equipo === p.id_equipo));
+    
+    const ranking = [];
+    proyectosEvento.forEach(p => {
+        const evals = evaluaciones.filter(e => e.id_proy === p.id_proy);
+        if (evals.length > 0) {
+            const promedio = evals.reduce((sum, e) => sum + e.promedio, 0) / evals.length;
+            const equipo = equiposEvento.find(eq => eq.id_equipo === p.id_equipo);
+            ranking.push({
+                proyecto: p.nombre,
+                equipo: equipo?.nombre || 'N/A',
+                promedio: promedio
+            });
+        }
+    });
+    ranking.sort((a, b) => b.promedio - a.promedio);
+    
+    // Crear modal con resultados
+    let modalHTML = `
+        <div class="modal fade" id="modalResultados" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title"><i class="fas fa-trophy me-2"></i>Resultados: ${evento.nombre}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+    `;
+    
+    if (ranking.length === 0) {
+        modalHTML += `<p class="text-muted text-center">No hay evaluaciones disponibles para este evento.</p>`;
+    } else {
+        modalHTML += `<table class="table table-striped align-middle">
+            <thead class="table-primary">
+                <tr>
+                    <th>#</th>
+                    <th>Proyecto</th>
+                    <th>Equipo</th>
+                    <th>Puntaje</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        ranking.forEach((r, idx) => {
+            let tableClass = '';
+            if (idx === 0) tableClass = 'table-success';
+            else if (idx === 1) tableClass = 'table-info';
+            else if (idx === 2) tableClass = 'table-warning';
+            modalHTML += `
+                <tr ${tableClass ? `class="${tableClass}"` : ''}>
+                    <td><span class="badge bg-primary">${idx + 1}</span></td>
+                    <td><strong>${r.proyecto}</strong></td>
+                    <td>${r.equipo}</td>
+                    <td><strong>${r.promedio.toFixed(2)} pts</strong></td>
+                </tr>
+            `;
+        });
+        modalHTML += `
+            </tbody>
+        </table>`;
+    }
+    
+    modalHTML += `
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal anterior si existe
+    const existingModal = document.getElementById('modalResultados');
+    if (existingModal) existingModal.remove();
+    
+    // Agregar modal al DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalResultados'));
+    modal.show();
+}
+
 // ============================================
-// ================ INICIALIZACIÓN ============
+// ESTADÍSTICAS - Contadores del dashboard
 // ============================================
 
+/** Actualizar tarjetas de estadísticas */
+async function actualizarStats() {
+    const eventos = await obtenerEventos();
+    const participantes = await obtenerParticipantes();
+    const equipos = await obtenerEquipos();
+    const proyectos = await obtenerProyectos();
+
+    const statsGrid = document.getElementById('statsGrid');
+    if (statsGrid) {
+        statsGrid.innerHTML = `
+            <div class="col-md-3"><div class="stats-card"><h3>${eventos.length}</h3><p><i class="fas fa-calendar-alt me-1"></i> Eventos</p></div></div>
+            <div class="col-md-3"><div class="stats-card"><h3>${participantes.length}</h3><p><i class="fas fa-users me-1"></i> Participantes</p></div></div>
+            <div class="col-md-3"><div class="stats-card"><h3>${equipos.length}</h3><p><i class="fas fa-user-friends me-1"></i> Equipos</p></div></div>
+            <div class="col-md-3"><div class="stats-card"><h3>${proyectos.length}</h3><p><i class="fas fa-project-diagram me-1"></i> Proyectos</p></div></div>
+        `;
+    }
+}
+
+// ============================================
+// INICIALIZACIÓN
+// ============================================
+
+/** Función principal que inicializa todos los módulos */
 async function inicializar() {
-    setupEquipoFormListeners();
-    setupEventoFormListeners();
     if (typeof renderizarEventos === 'function') await renderizarEventos();
     if (typeof renderizarParticipantes === 'function') await renderizarParticipantes();
     if (typeof renderizarEquipos === 'function') await renderizarEquipos();
@@ -1400,31 +1739,37 @@ async function inicializar() {
     if (typeof renderizarMentores === 'function') await renderizarMentores();
     if (typeof renderizarAsignaciones === 'function') await renderizarAsignaciones();
     if (typeof renderizarRanking === 'function') await renderizarRanking();
-    if (typeof actualizarSelectProyectosEvaluacion === 'function') await actualizarSelectProyectosEvaluacion();
     if (typeof renderizarEvaluaciones === 'function') await renderizarEvaluaciones();
+    if (typeof renderizarCronograma === 'function') await renderizarCronograma();
+    if (typeof actualizarStats === 'function') await actualizarStats();
     if (typeof cargarSelectEventos === 'function') await cargarSelectEventos();
     if (typeof cargarSelectEquipos === 'function') await cargarSelectEquipos();
     if (typeof cargarSelectMentores === 'function') await cargarSelectMentores();
     if (typeof cargarSelectEquiposAsignacion === 'function') await cargarSelectEquiposAsignacion();
     if (typeof actualizarSelectEventosCronograma === 'function') await actualizarSelectEventosCronograma();
-    if (typeof renderizarCronograma === 'function') await renderizarCronograma();
-    
-    if (typeof actualizarBadgeNotificaciones === 'function') actualizarBadgeNotificaciones();
+    if (typeof actualizarSelectProyectosEvaluacion === 'function') await actualizarSelectProyectosEvaluacion();
 }
 
-// Exportar funciones globales
+// ============================================
+// EXPORTAR FUNCIONES GLOBALES
+// ============================================
+
+// Eventos
 window.agregarEvento = agregarEvento;
+window.editarEvento = editarEvento;
 window.guardarEvento = guardarEvento;
 window.eliminarEvento = eliminarEvento;
 window.renderizarEventos = renderizarEventos;
 
+// Participantes
 window.agregarParticipante = agregarParticipante;
-window.guardarParticipante = guardarParticipante;
 window.editarParticipante = editarParticipante;
+window.guardarParticipante = guardarParticipante;
 window.cancelarEdicionParticipante = cancelarEdicionParticipante;
 window.eliminarParticipante = eliminarParticipante;
 window.renderizarParticipantes = renderizarParticipantes;
 
+// Equipos
 window.agregarEquipo = agregarEquipo;
 window.editarEquipo = editarEquipo;
 window.cancelarEdicionEquipo = cancelarEdicionEquipo;
@@ -1433,11 +1778,16 @@ window.eliminarEquipo = eliminarEquipo;
 window.renderizarEquipos = renderizarEquipos;
 window.cargarSelectEventos = cargarSelectEventos;
 
+// Proyectos
 window.agregarProyecto = agregarProyecto;
+window.editarProyecto = editarProyecto;
+window.guardarProyecto = guardarProyecto;
+window.cancelarEdicionProyecto = cancelarEdicionProyecto;
 window.eliminarProyecto = eliminarProyecto;
 window.renderizarProyectos = renderizarProyectos;
 window.cargarSelectEquipos = cargarSelectEquipos;
 
+// Evaluaciones
 window.obtenerEvaluaciones = obtenerEvaluaciones;
 window.actualizarSelectProyectosEvaluacion = actualizarSelectProyectosEvaluacion;
 window.guardarEvaluacion = guardarEvaluacion;
@@ -1448,9 +1798,10 @@ window.renderizarEvaluaciones = renderizarEvaluaciones;
 window.renderizarResultados = renderizarResultados;
 window.publicarResultados = publicarResultados;
 
+// Mentores
 window.agregarMentor = agregarMentor;
-window.guardarMentor = guardarMentor;
 window.editarMentor = editarMentor;
+window.guardarMentor = guardarMentor;
 window.cancelarEdicionMentor = cancelarEdicionMentor;
 window.eliminarMentor = eliminarMentor;
 window.renderizarMentores = renderizarMentores;
@@ -1461,27 +1812,33 @@ window.editarAsignacion = editarAsignacion;
 window.cancelarEdicionAsignacion = cancelarEdicionAsignacion;
 window.renderizarAsignaciones = renderizarAsignaciones;
 
+// Actividades
 window.obtenerActividades = obtenerActividades;
 window.actualizarSelectEventosCronograma = actualizarSelectEventosCronograma;
 window.agregarActividad = agregarActividad;
+window.editarActividad = editarActividad;
+window.cancelarEdicionActividad = cancelarEdicionActividad;
 window.eliminarActividad = eliminarActividad;
 window.renderizarCronograma = renderizarCronograma;
 
-window.obtenerEventos = obtenerEventos;
-window.obtenerParticipantes = obtenerParticipantes;
-window.obtenerEquipos = obtenerEquipos;
-window.obtenerProyectos = obtenerProyectos;
+// Ranking y Stats
 window.obtenerRanking = obtenerRanking;
 window.renderizarRanking = renderizarRanking;
 window.actualizarStats = actualizarStats;
 
+// Historial
 window.renderizarHistorial = renderizarHistorial;
 window.verResultadosEvento = verResultadosEvento;
+
+// Dashboard
 window.renderizarDashboard = renderizarDashboard;
 
+// Inicialización
 window.inicializar = inicializar;
 
-// Iniciar cuando el DOM esté listo
+// ============================================
+// INICIAR APLICACIÓN
+// ============================================
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', inicializar);
 } else {

@@ -13,22 +13,6 @@ app.use(express.json());
 // INICIALIZACIÓN DE TABLAS
 // ============================================
 
-async function inicializarTablaNotificaciones() {
-    try {
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS notificaciones_ignoradas (
-                id SERIAL PRIMARY KEY,
-                id_evento INTEGER NOT NULL UNIQUE,
-                fecha_ignorada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (id_evento) REFERENCES eventos(id_evento) ON DELETE CASCADE
-            )
-        `);
-        console.log('✅ Tabla notificaciones_ignoradas inicializada');
-    } catch (err) {
-        console.error('❌ Error al crear tabla notificaciones_ignoradas:', err.message);
-    }
-}
-
 async function inicializarTablaActividades() {
     try {
         await db.query(`
@@ -56,14 +40,6 @@ async function inicializarColumnaMentorEnEquipos() {
         console.error('❌ Error al asegurar columna id_mentor en equipos:', err.message);
     }
 }
-
-// ============================================
-// RUTAS DE PRUEBA
-// ============================================
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
-});
 
 // ============================================
 // ================ EVENTOS ==================
@@ -340,6 +316,40 @@ app.post('/api/proyectos', async (req, res) => {
     }
 });
 
+app.get('/api/proyectos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await db.query(`
+            SELECT p.*, e.nombre as equipo_nombre
+            FROM proyectos p
+            LEFT JOIN equipos e ON p.id_equipo = e.id_equipo
+            WHERE p.id_proy = $1
+        `, [id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Proyecto no encontrado' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/proyectos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre, descripcion, tecnologias, repo_url, id_equipo, estado } = req.body;
+        const result = await db.query(
+            `UPDATE proyectos SET nombre = $1, descripcion = $2, tecnologias = $3, repo_url = $4, id_equipo = $5, estado = $6
+             WHERE id_proy = $7 RETURNING *`,
+            [nombre, descripcion || '', tecnologias || '', repo_url || '', id_equipo, estado || 'registrado', id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Proyecto no encontrado' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.delete('/api/proyectos/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -350,10 +360,6 @@ app.delete('/api/proyectos/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-// ============================================
-// ================ EVALUACIONES ==============
-// ============================================
 
 // ============================================
 // ================ EVALUACIONES ==============
@@ -468,7 +474,6 @@ app.put('/api/evaluaciones/:id', async (req, res) => {
         const { id } = req.params;
         const { id_proy, juez, innovacion, complejidad, presentacion, impacto, comentarios } = req.body;
         
-        // Validar datos
         if (innovacion === undefined || innovacion === null) {
             return res.status(400).json({ error: 'innovacion es requerido' });
         }
@@ -482,7 +487,6 @@ app.put('/api/evaluaciones/:id', async (req, res) => {
             return res.status(400).json({ error: 'impacto es requerido' });
         }
         
-        // Buscar o crear el juez
         let id_juez;
         if (juez) {
             const juezResult = await db.query('SELECT id_juez FROM jueces WHERE nombre = $1', [juez.trim()]);
@@ -628,6 +632,26 @@ app.get('/api/ranking', async (req, res) => {
 // ================ ACTIVIDADES ===============
 // ============================================
 
+// Obtener una actividad (debe estar antes que GET /api/actividades general)
+app.get('/api/actividades/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await db.query(`
+            SELECT a.*, e.nombre as evento_nombre
+            FROM actividades a
+            JOIN eventos e ON a.id_evento = e.id_evento
+            WHERE a.id_actividad = $1
+        `, [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Actividad no encontrada' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error en GET /api/actividades/:id:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Obtener todas las actividades
 app.get('/api/actividades', async (req, res) => {
     try {
@@ -635,7 +659,7 @@ app.get('/api/actividades', async (req, res) => {
             SELECT a.*, e.nombre as evento_nombre
             FROM actividades a
             JOIN eventos e ON a.id_evento = e.id_evento
-            ORDER BY a.fecha_hora ASC
+            ORDER BY a.fecha_hora DESC
         `);
         res.json(result.rows);
     } catch (err) {
@@ -684,60 +708,52 @@ app.delete('/api/actividades/:id', async (req, res) => {
     }
 });
 
-// ============================================
-// ================ NOTIFICACIONES ============
-// ============================================
-
-app.get('/api/notificaciones-ignoradas', async (req, res) => {
-    try {
-        const result = await db.query('SELECT id_evento FROM notificaciones_ignoradas');
-        res.json(result.rows.map(r => r.id_evento));
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/notificaciones-ignoradas', async (req, res) => {
-    try {
-        const { id_evento } = req.body;
-        await db.query(
-            'INSERT INTO notificaciones_ignoradas (id_evento) VALUES ($1) ON CONFLICT (id_evento) DO NOTHING',
-            [id_evento]
-        );
-        res.json({ message: 'Notificación ignorada' });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete('/api/notificaciones-ignoradas/:id', async (req, res) => {
+// Actualizar una actividad
+app.put('/api/actividades/:id', async (req, res) => {
+    console.log('📝 PUT /api/actividades/' + req.params.id + ' - Body:', req.body);
     try {
         const { id } = req.params;
-        await db.query('DELETE FROM notificaciones_ignoradas WHERE id_evento = $1', [id]);
-        res.json({ message: 'Notificación restaurada' });
+        const { id_evento, nombre, descripcion, fecha_hora, ubicacion } = req.body;
+
+        if (!id_evento) return res.status(400).json({ error: 'id_evento es requerido' });
+        if (!nombre) return res.status(400).json({ error: 'nombre es requerido' });
+        if (!fecha_hora) return res.status(400).json({ error: 'fecha_hora es requerido' });
+
+        const result = await db.query(
+            `UPDATE actividades
+             SET id_evento = $1, nombre = $2, descripcion = $3, fecha_hora = $4, ubicacion = $5
+             WHERE id_actividad = $6
+             RETURNING *`,
+            [id_evento, nombre, descripcion || '', fecha_hora, ubicacion || '', id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Actividad no encontrada' });
+        }
+
+        res.json(result.rows[0]);
     } catch (err) {
-        console.error(err.message);
+        console.error('❌ Error en PUT /api/actividades/:id:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
 // ============================================
-// ================ FRONTEND ==================
+// ================ FRONTEND (DOCS) ===========
 // ============================================
 
-app.use(express.static(path.join(__dirname, '../frontend')));
+// Servir archivos estáticos desde la carpeta docs
+app.use(express.static(path.join(__dirname, '../docs')));
 
 // Ruta principal
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    res.sendFile(path.join(__dirname, '../docs/index.html'));
 });
 
-// Ruta para páginas individuales
-app.get('/:page.html', (req, res) => {
+// Ruta para páginas individuales (sin extensión .html)
+app.get('/:page', (req, res) => {
     const page = req.params.page;
-    const filePath = path.join(__dirname, '../frontend', `${page}.html`);
+    const filePath = path.join(__dirname, '../docs', `${page}.html`);
     res.sendFile(filePath);
 });
 
@@ -746,11 +762,9 @@ app.get('/:page.html', (req, res) => {
 // ============================================
 
 app.listen(PORT, async () => {
-    await inicializarTablaNotificaciones();
     await inicializarTablaActividades();
     await inicializarColumnaMentorEnEquipos();
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
     console.log(`API eventos: http://localhost:${PORT}/api/eventos`);
     console.log(`API equipos: http://localhost:${PORT}/api/equipos`);
-    console.log(`Prueba: http://localhost:${PORT}/api/test`);
 });
