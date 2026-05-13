@@ -1,9 +1,10 @@
-// js/app.js - Versión API (conexión a backend PostgreSQL)
+// js/app.js - Versión localStorage (sin conexión a servidor)
 
 // ============================================
-// CONFIGURACIÓN DE LA API
+// CONFIGURACIÓN DE ALMACENAMIENTO LOCAL
 // ============================================
-const API_URL = 'http://localhost:3000/api';
+// Ahora todas las operaciones se hacen con localStorage a través del objeto 'DB'
+// El proyecto es 100% localStorage - no requiere servidor ni base de datos
 
 // Variables para controlar modo edición en cada módulo
 let eventoEditId = null;
@@ -140,9 +141,7 @@ async function renderizarDashboard() {
 /** Obtener todos los eventos */
 async function obtenerEventos() {
     try {
-        const response = await fetch(`${API_URL}/eventos`);
-        if (!response.ok) throw new Error('Error al cargar eventos');
-        return await response.json();
+        return DB.obtenerEventos();
     } catch (error) {
         console.error('Error obtenerEventos:', error);
         return [];
@@ -152,9 +151,7 @@ async function obtenerEventos() {
 /** Obtener un evento por ID */
 async function obtenerEventoPorId(id) {
     try {
-        const response = await fetch(`${API_URL}/eventos/${id}`);
-        if (!response.ok) throw new Error('Error al cargar evento');
-        return await response.json();
+        return DB.obtenerEventoPorId(id);
     } catch (error) {
         console.error('Error obtenerEventoPorId:', error);
         return null;
@@ -179,21 +176,16 @@ async function agregarEvento() {
     if (cupo <= 0) return mostrarMensaje("Cupo debe ser mayor que cero", true);
 
     try {
-        const response = await fetch(`${API_URL}/eventos`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                nombre, 
-                fecha_inicio, 
-                fecha_fin, 
-                lugar, 
-                descripcion, 
-                cupo_maximo: cupo 
-            })
+        DB.agregarEvento({ 
+            nombre, 
+            fecha_inicio, 
+            fecha_fin, 
+            lugar, 
+            descripcion, 
+            cupo_maximo: cupo,
+            estado: 'proximo'
         });
 
-        if (!response.ok) throw new Error('Error al crear evento');
-        
         mostrarMensaje('Evento agregado correctamente');
         limpiarFormularioEvento();
         
@@ -214,20 +206,14 @@ async function actualizarEvento(id) {
     const descripcion = document.getElementById('eventoDescripcion')?.value;
 
     try {
-        const response = await fetch(`${API_URL}/eventos/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                nombre, 
-                fecha_inicio, 
-                fecha_fin, 
-                lugar, 
-                descripcion, 
-                cupo_maximo 
-            })
+        DB.actualizarEvento(id, { 
+            nombre, 
+            fecha_inicio, 
+            fecha_fin, 
+            lugar, 
+            descripcion, 
+            cupo_maximo 
         });
-
-        if (!response.ok) throw new Error('Error al actualizar evento');
         
         mostrarMensaje('Evento actualizado correctamente');
         limpiarFormularioEvento();
@@ -280,7 +266,7 @@ async function guardarEvento() {
 async function eliminarEvento(id) {
     if (!confirm('¿Eliminar este evento? Se eliminarán también las actividades asociadas.')) return;
     try {
-        await fetch(`${API_URL}/eventos/${id}`, { method: 'DELETE' });
+        DB.eliminarEvento(id);
         mostrarMensaje('Evento eliminado');
         await renderizarEventos();
         await actualizarStats();
@@ -326,9 +312,7 @@ async function renderizarEventos() {
 /** Obtener todos los participantes */
 async function obtenerParticipantes() {
     try {
-        const response = await fetch(`${API_URL}/participantes`);
-        if (!response.ok) throw new Error('Error al cargar participantes');
-        return await response.json();
+        return DB.obtenerParticipantes();
     } catch (error) {
         console.error('Error obtenerParticipantes:', error);
         return [];
@@ -338,9 +322,7 @@ async function obtenerParticipantes() {
 /** Obtener un participante por ID */
 async function obtenerParticipantePorId(id) {
     try {
-        const response = await fetch(`${API_URL}/participantes/${id}`);
-        if (!response.ok) throw new Error('Participante no encontrado');
-        return await response.json();
+        return DB.obtenerParticipantePorId(id);
     } catch (error) {
         console.error('Error obtenerParticipantePorId:', error);
         return null;
@@ -359,13 +341,12 @@ async function agregarParticipante() {
     if (!emailRegex.test(email)) return mostrarMensaje("Email inválido", true);
 
     try {
-        const response = await fetch(`${API_URL}/participantes`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, email, password_hash: 'temp123', habilidades: habilidades || '' })
+        DB.agregarParticipante({ 
+            nombre, 
+            email, 
+            password_hash: 'temp123', 
+            habilidades: habilidades || '' 
         });
-
-        if (!response.ok) throw new Error('Error al crear participante');
 
         mostrarMensaje('Participante agregado correctamente');
         document.getElementById('partNombre').value = '';
@@ -391,13 +372,11 @@ async function actualizarParticipante(id) {
     if (!emailRegex.test(email)) return mostrarMensaje("Email inválido", true);
 
     try {
-        const response = await fetch(`${API_URL}/participantes/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, email, habilidades: habilidades || '' })
+        DB.actualizarParticipante(id, { 
+            nombre, 
+            email, 
+            habilidades: habilidades || '' 
         });
-
-        if (!response.ok) throw new Error('Error al actualizar participante');
 
         mostrarMensaje('Participante actualizado correctamente');
         participanteEditId = null;
@@ -460,7 +439,7 @@ async function guardarParticipante() {
 async function eliminarParticipante(id) {
     if (!confirm('¿Eliminar este participante?')) return;
     try {
-        await fetch(`${API_URL}/participantes/${id}`, { method: 'DELETE' });
+        DB.eliminarParticipante(id);
         mostrarMensaje('Participante eliminado');
         await renderizarParticipantes();
         await actualizarStats();
@@ -503,9 +482,7 @@ async function renderizarParticipantes() {
 /** Obtener todos los equipos */
 async function obtenerEquipos() {
     try {
-        const response = await fetch(`${API_URL}/equipos`);
-        if (!response.ok) throw new Error('Error al cargar equipos');
-        return await response.json();
+        return DB.obtenerEquipos();
     } catch (error) {
         console.error('Error obtenerEquipos:', error);
         return [];
@@ -515,9 +492,7 @@ async function obtenerEquipos() {
 /** Obtener un equipo por ID */
 async function obtenerEquipoPorId(id) {
     try {
-        const response = await fetch(`${API_URL}/equipos/${id}`);
-        if (!response.ok) throw new Error('Error al cargar equipo');
-        return await response.json();
+        return DB.obtenerEquipoPorId(id);
     } catch (error) {
         console.error('Error obtenerEquipoPorId:', error);
         return null;
@@ -550,13 +525,12 @@ async function agregarEquipo() {
     if (miembros.some(id => isNaN(id) || id <= 0)) return mostrarMensaje("IDs de participantes deben ser números positivos", true);
 
     try {
-        const response = await fetch(`${API_URL}/equipos`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, id_evento: parseInt(id_evento, 10), miembros, activo: true })
+        DB.agregarEquipo({ 
+            nombre, 
+            id_evento: parseInt(id_evento, 10), 
+            miembros, 
+            activo: true 
         });
-
-        if (!response.ok) throw new Error('Error al crear equipo');
 
         mostrarMensaje('Equipo agregado correctamente');
         document.getElementById('equipoNombre').value = '';
@@ -584,13 +558,12 @@ async function actualizarEquipo(id) {
     if (miembros.some(id => isNaN(id) || id <= 0)) return mostrarMensaje("IDs de participantes deben ser números positivos", true);
 
     try {
-        const response = await fetch(`${API_URL}/equipos/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, id_evento: parseInt(id_evento, 10), miembros, activo: true })
+        DB.actualizarEquipo(id, { 
+            nombre, 
+            id_evento: parseInt(id_evento, 10), 
+            miembros, 
+            activo: true 
         });
-
-        if (!response.ok) throw new Error('Error al actualizar equipo');
 
         mostrarMensaje('Equipo actualizado correctamente');
         equipoEditId = null;
@@ -650,7 +623,7 @@ async function guardarEquipo() {
 async function eliminarEquipo(id) {
     if (!confirm('¿Eliminar este equipo? También se eliminará su proyecto asociado.')) return;
     try {
-        await fetch(`${API_URL}/equipos/${id}`, { method: 'DELETE' });
+        DB.eliminarEquipo(id);
         mostrarMensaje('Equipo eliminado');
         await renderizarEquipos();
         await actualizarStats();
@@ -705,9 +678,7 @@ async function renderizarEquipos() {
 /** Obtener todos los proyectos */
 async function obtenerProyectos() {
     try {
-        const response = await fetch(`${API_URL}/proyectos`);
-        if (!response.ok) throw new Error('Error al cargar proyectos');
-        return await response.json();
+        return DB.obtenerProyectos();
     } catch (error) {
         console.error('Error obtenerProyectos:', error);
         return [];
@@ -741,13 +712,14 @@ async function agregarProyecto() {
     if (!id_equipo) return mostrarMensaje("Seleccione un equipo", true);
 
     try {
-        const response = await fetch(`${API_URL}/proyectos`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, descripcion, tecnologias, repo_url, id_equipo: parseInt(id_equipo), estado: 'registrado' })
+        DB.agregarProyecto({ 
+            nombre, 
+            descripcion, 
+            tecnologias, 
+            repo_url, 
+            id_equipo: parseInt(id_equipo), 
+            estado: 'registrado' 
         });
-
-        if (!response.ok) throw new Error('Error al crear proyecto');
 
         mostrarMensaje('Proyecto registrado correctamente');
         document.getElementById('proyectoNombre').value = '';
@@ -765,9 +737,7 @@ async function agregarProyecto() {
 /** Obtener un proyecto por ID */
 async function obtenerProyectoPorId(id) {
     try {
-        const response = await fetch(`${API_URL}/proyectos/${id}`);
-        if (!response.ok) throw new Error('Error al cargar proyecto');
-        return await response.json();
+        return DB.obtenerProyectoPorId(id);
     } catch (error) {
         console.error('Error obtenerProyectoPorId:', error);
         return null;
@@ -789,13 +759,14 @@ async function actualizarProyecto(id) {
     if (!id_equipo) return mostrarMensaje("Seleccione un equipo", true);
 
     try {
-        const response = await fetch(`${API_URL}/proyectos/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, descripcion, tecnologias, repo_url, id_equipo: parseInt(id_equipo), estado: 'registrado' })
+        DB.actualizarProyecto(id, { 
+            nombre, 
+            descripcion, 
+            tecnologias, 
+            repo_url, 
+            id_equipo: parseInt(id_equipo), 
+            estado: 'registrado' 
         });
-
-        if (!response.ok) throw new Error('Error al actualizar proyecto');
 
         mostrarMensaje('Proyecto actualizado correctamente');
         proyectoEditId = null;
@@ -858,6 +829,7 @@ async function guardarProyecto() {
 /** Renderizar tabla de proyectos */
 async function renderizarProyectos() {
     const proyectos = await obtenerProyectos();
+    const equipos = await obtenerEquipos();
     const tbody = document.getElementById('proyectosBody');
     if (tbody) {
         tbody.innerHTML = '';
@@ -867,11 +839,13 @@ async function renderizarProyectos() {
             row.insertCell(0).textContent = "No hay proyectos registrados";
         } else {
             proyectos.forEach(p => {
+                const equipo = equipos.find(e => e.id_equipo == p.id_equipo || e.id == p.id_equipo);
+                const nombreEquipo = equipo?.nombre || '-';
                 const row = tbody.insertRow();
                 row.insertCell(0).innerHTML = `<span class="badge-id">#${p.id_proy}</span>`;
                 row.insertCell(1).textContent = p.nombre;
                 row.insertCell(2).textContent = p.tecnologias || '-';
-                row.insertCell(3).textContent = p.equipo_nombre || '-';
+                row.insertCell(3).textContent = nombreEquipo;
                 row.insertCell(4).innerHTML = `
                     <button class="btn btn-sm btn-warning me-1" onclick="editarProyecto(${p.id_proy})"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-sm btn-danger" onclick="eliminarProyecto(${p.id_proy})"><i class="fas fa-trash-alt"></i></button>
@@ -885,7 +859,7 @@ async function renderizarProyectos() {
 async function eliminarProyecto(id) {
     if (!confirm('¿Eliminar este proyecto? También se eliminarán sus avances.')) return;
     try {
-        await fetch(`${API_URL}/proyectos/${id}`, { method: 'DELETE' });
+        DB.eliminarProyecto(id);
         mostrarMensaje('Proyecto eliminado');
         await renderizarProyectos();
     } catch (error) {
@@ -900,9 +874,7 @@ async function eliminarProyecto(id) {
 /** Obtener todas las evaluaciones */
 async function obtenerEvaluaciones() {
     try {
-        const response = await fetch(`${API_URL}/evaluaciones`);
-        if (!response.ok) throw new Error('Error al cargar evaluaciones');
-        return await response.json();
+        return DB.obtenerEvaluaciones();
     } catch (error) {
         console.error('Error obtenerEvaluaciones:', error);
         return [];
@@ -912,9 +884,7 @@ async function obtenerEvaluaciones() {
 /** Obtener una evaluación por ID */
 async function obtenerEvaluacionPorId(id) {
     try {
-        const response = await fetch(`${API_URL}/evaluaciones/${id}`);
-        if (!response.ok) throw new Error('Error al cargar evaluación');
-        return await response.json();
+        return DB.obtenerEvaluacionPorId(id);
     } catch (error) {
         console.error('Error obtenerEvaluacionPorId:', error);
         return null;
@@ -924,11 +894,14 @@ async function obtenerEvaluacionPorId(id) {
 /** Cargar proyectos en el select de evaluaciones */
 async function actualizarSelectProyectosEvaluacion() {
     const proyectos = await obtenerProyectos();
+    const equipos = await obtenerEquipos();
     const select = document.getElementById('evaluacionProyectoId');
     if (select) {
         select.innerHTML = '<option value="">Seleccione un proyecto</option>';
         proyectos.forEach(p => {
-            select.innerHTML += `<option value="${p.id_proy}">${p.nombre} ${p.equipo_nombre ? `- ${p.equipo_nombre}` : ''}</option>`;
+            const equipo = equipos.find(eq => eq.id_equipo == p.id_equipo || eq.id == p.id_equipo);
+            const equipoEtiqueta = equipo ? ` - ${equipo.nombre}` : '';
+            select.innerHTML += `<option value="${p.id_proy}">${p.nombre}${equipoEtiqueta}</option>`;
         });
     }
 }
@@ -952,31 +925,23 @@ async function guardarEvaluacion() {
     if (!comentarios?.trim()) return mostrarMensaje('Comentarios son obligatorios', true);
 
     try {
-        let url = `${API_URL}/evaluaciones`;
-        let method = 'POST';
+        const promedio = Number(((innovacion + complejidad + presentacion + impacto) / 4).toFixed(2));
+        const data = {
+            id_proy: proyectoId,
+            juez: juez.trim(),
+            juez_nombre: juez.trim(),
+            innovacion,
+            complejidad,
+            presentacion,
+            impacto,
+            promedio,
+            comentarios: comentarios?.trim() || ''
+        };
         
         if (evaluacionEditId !== null) {
-            url = `${API_URL}/evaluaciones/${evaluacionEditId}`;
-            method = 'PUT';
-        }
-        
-        const response = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                id_proy: proyectoId,
-                juez: juez.trim(),
-                innovacion,
-                complejidad,
-                presentacion,
-                impacto,
-                comentarios: comentarios?.trim() || ''
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Error al guardar evaluación');
+            DB.actualizarEvaluacion(evaluacionEditId, data);
+        } else {
+            DB.agregarEvaluacion(data);
         }
 
         mostrarMensaje(evaluacionEditId ? 'Evaluación actualizada correctamente' : 'Evaluación registrada correctamente');
@@ -1001,7 +966,7 @@ async function editarEvaluacion(id) {
     evaluacionEditId = id;
     
     document.getElementById('evaluacionProyectoId').value = evaluacion.id_proy;
-    document.getElementById('evaluacionJuez').value = evaluacion.juez_nombre || '';
+    document.getElementById('evaluacionJuez').value = evaluacion.juez || evaluacion.juez_nombre || '';
     document.getElementById('evaluacionInnovacion').value = evaluacion.innovacion;
     document.getElementById('evaluacionComplejidad').value = evaluacion.complejidad;
     document.getElementById('evaluacionPresentacion').value = evaluacion.presentacion;
@@ -1042,8 +1007,7 @@ function cancelarEdicionEvaluacion() {
 async function eliminarEvaluacion(id) {
     if (!confirm('¿Eliminar esta evaluación?')) return;
     try {
-        const response = await fetch(`${API_URL}/evaluaciones/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Error al eliminar');
+        DB.eliminarEvaluacion(id);
         mostrarMensaje('Evaluación eliminada');
         await renderizarEvaluaciones();
         await renderizarResultados();
@@ -1055,6 +1019,8 @@ async function eliminarEvaluacion(id) {
 /** Renderizar lista de evaluaciones */
 async function renderizarEvaluaciones() {
     const evaluaciones = await obtenerEvaluaciones();
+    const proyectos = await obtenerProyectos();
+    const equipos = await obtenerEquipos();
     const container = document.getElementById('evaluacionesBody');
     if (!container) return;
     container.innerHTML = '';
@@ -1063,20 +1029,26 @@ async function renderizarEvaluaciones() {
         return;
     }
     evaluaciones.forEach(ev => {
+        const proyecto = proyectos.find(p => p.id_proy == ev.id_proy || p.id_proyecto == ev.id_proy);
+        const equipo = proyecto ? equipos.find(eq => eq.id_equipo == proyecto.id_equipo || eq.id == proyecto.id_equipo) : null;
+        const proyectoNombre = proyecto?.nombre || `Proyecto ${ev.id_proy}`;
+        const equipoNombre = equipo?.nombre || 'Equipo no asignado';
+        const juezNombre = ev.juez || ev.juez_nombre || 'Juez desconocido';
+        const promedio = !isNaN(ev.promedio) ? Number(ev.promedio) : Number(((Number(ev.innovacion) || 0) + (Number(ev.complejidad) || 0) + (Number(ev.presentacion) || 0) + (Number(ev.impacto) || 0)) / 4);
         const row = document.createElement('div');
         row.className = 'mb-3 p-3 border rounded bg-light';
         row.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <div><strong>${ev.proyecto_nombre}</strong> <span class="text-secondary">(${ev.equipo_nombre || 'Equipo no asignado'})</span></div>
+                <div><strong>${proyectoNombre}</strong> <span class="text-secondary">(${equipoNombre})</span></div>
                 <div class="text-end">
-                    <em>${ev.juez_nombre || 'Juez desconocido'}</em>
+                    <em>${juezNombre}</em>
                     <div class="mt-1">
                         <button class="btn btn-sm btn-warning me-1" onclick="editarEvaluacion(${ev.id_eval})"><i class="fas fa-edit"></i> Editar</button>
                         <button class="btn btn-sm btn-danger" onclick="eliminarEvaluacion(${ev.id_eval})"><i class="fas fa-trash-alt"></i> Eliminar</button>
                     </div>
                 </div>
             </div>
-            <div>Promedio: <strong>${parseFloat(ev.promedio).toFixed(2)}</strong></div>
+            <div>Promedio: <strong>${promedio.toFixed(2)}</strong></div>
             <div>Innovación: ${ev.innovacion} · Complejidad: ${ev.complejidad} · Presentación: ${ev.presentacion} · Impacto: ${ev.impacto}</div>
             <div class="text-muted mt-2">${ev.comentarios || 'Sin comentarios'}</div>
         `;
@@ -1103,9 +1075,7 @@ async function publicarResultados() {
 /** Obtener todos los mentores */
 async function obtenerMentores() {
     try {
-        const response = await fetch(`${API_URL}/mentores`);
-        if (!response.ok) throw new Error('Error al cargar mentores');
-        return await response.json();
+        return DB.obtenerMentores();
     } catch (error) {
         console.error('Error obtenerMentores:', error);
         return [];
@@ -1149,13 +1119,7 @@ async function agregarMentor() {
     if (!telefono?.trim()) return mostrarMensaje("Teléfono obligatorio", true);
 
     try {
-        const response = await fetch(`${API_URL}/mentores`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, email, especialidad, telefono })
-        });
-
-        if (!response.ok) throw new Error('Error al crear mentor');
+        DB.agregarMentor({ nombre, email, especialidad, telefono });
 
         mostrarMensaje('Mentor agregado correctamente');
         resetFormularioMentor();
@@ -1229,13 +1193,7 @@ async function actualizarMentor() {
     const telefono = document.getElementById('mentorTelefono')?.value;
 
     try {
-        const response = await fetch(`${API_URL}/mentores/${mentorEditId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, email, especialidad, telefono })
-        });
-
-        if (!response.ok) throw new Error('Error al actualizar mentor');
+        DB.actualizarMentor(mentorEditId, { nombre, email, especialidad, telefono });
 
         mostrarMensaje('Mentor actualizado correctamente');
         resetFormularioMentor();
@@ -1268,7 +1226,7 @@ function resetFormularioMentor() {
 async function eliminarMentor(id) {
     if (!confirm('¿Eliminar este mentor?')) return;
     try {
-        await fetch(`${API_URL}/mentores/${id}`, { method: 'DELETE' });
+        DB.eliminarMentor(id);
         mostrarMensaje('Mentor eliminado');
         await renderizarMentores();
         await cargarSelectMentores();
@@ -1314,14 +1272,7 @@ async function asignarMentorEquipo() {
     if (!equipoId) return mostrarMensaje('Seleccione un equipo', true);
 
     try {
-        const response = await fetch(`${API_URL}/equipos/${equipoId}/mentor`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_mentor: mentorId })
-        });
-
-        if (!response.ok) throw new Error('Error al asignar mentor');
-
+        DB.asignarMentorEquipo(equipoId, mentorId);
         mostrarMensaje('Mentor asignado al equipo');
         await renderizarAsignaciones();
         await cargarSelectEquiposAsignacion();
@@ -1364,9 +1315,7 @@ function cancelarEdicionAsignacion() {
 /** Obtener ranking de proyectos */
 async function obtenerRanking() {
     try {
-        const response = await fetch(`${API_URL}/ranking`);
-        if (!response.ok) throw new Error('Error al cargar ranking');
-        return await response.json();
+        return DB.obtenerRanking();
     } catch (error) {
         console.error('Error obtenerRanking:', error);
         return [];
@@ -1406,9 +1355,7 @@ async function renderizarRanking() {
 /** Obtener todas las actividades */
 async function obtenerActividades() {
     try {
-        const response = await fetch(`${API_URL}/actividades`);
-        if (!response.ok) throw new Error('Error al cargar actividades');
-        return await response.json();
+        return DB.obtenerActividades();
     } catch (error) {
         console.error('Error obtenerActividades:', error);
         return [];
@@ -1440,30 +1387,27 @@ async function agregarActividad() {
     if (!fecha_hora) return mostrarMensaje('Fecha y hora son obligatorias', true);
 
     try {
-        let url = `${API_URL}/actividades`;
+        let url = `agregar`;
         let method = 'POST';
         const editId = actividadEditId || document.getElementById('actividadEditId')?.value;
 
         if (editId) {
-            url = `${API_URL}/actividades/${editId}`;
             method = 'PUT';
-        }
-
-        const response = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            DB.actualizarActividad(parseInt(editId), {
                 id_evento: parseInt(id_evento),
                 nombre: nombre.trim(),
                 descripcion: descripcion || '',
                 fecha_hora: fecha_hora,
                 ubicacion: ubicacion || ''
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            throw new Error(errorData?.error || (editId ? 'Error al actualizar actividad' : 'Error al crear actividad'));
+            });
+        } else {
+            DB.agregarActividad({
+                id_evento: parseInt(id_evento),
+                nombre: nombre.trim(),
+                descripcion: descripcion || '',
+                fecha_hora: fecha_hora,
+                ubicacion: ubicacion || ''
+            });
         }
 
         mostrarMensaje(editId ? 'Actividad actualizada correctamente' : 'Actividad agregada correctamente');
@@ -1483,9 +1427,7 @@ async function agregarActividad() {
 /** Obtener una actividad por id */
 async function obtenerActividadPorId(id) {
     try {
-        const response = await fetch(`${API_URL}/actividades/${id}`);
-        if (!response.ok) throw new Error('Error al cargar actividad');
-        return await response.json();
+        return DB.obtenerActividadPorId(id);
     } catch (error) {
         console.error('Error obtenerActividadPorId:', error);
         return null;
@@ -1536,8 +1478,7 @@ function cancelarEdicionActividad() {
 async function eliminarActividad(id) {
     if (!confirm('¿Eliminar esta actividad?')) return;
     try {
-        const response = await fetch(`${API_URL}/actividades/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Error al eliminar');
+        DB.eliminarActividad(id);
         mostrarMensaje('Actividad eliminada');
         await renderizarCronograma();
     } catch (error) {
@@ -1548,6 +1489,7 @@ async function eliminarActividad(id) {
 /** Renderizar cronograma */
 async function renderizarCronograma() {
     const actividades = await obtenerActividades();
+    const eventos = await obtenerEventos();
     const tbody = document.getElementById('cronogramaBody');
     if (tbody) {
         tbody.innerHTML = '';
@@ -1558,8 +1500,10 @@ async function renderizarCronograma() {
             row.classList.add('text-center', 'text-muted');
         } else {
             actividades.forEach(act => {
+                const evento = eventos.find(e => e.id_evento == act.id_evento || e.id == act.id_evento);
+                const eventoTexto = evento?.nombre || `Evento ${act.id_evento}`;
                 const row = tbody.insertRow();
-                row.insertCell(0).textContent = act.evento_nombre || '-';
+                row.insertCell(0).textContent = eventoTexto;
                 row.insertCell(1).textContent = act.nombre;
                 row.insertCell(2).textContent = act.descripcion || '-';
                 row.insertCell(3).textContent = new Date(act.fecha_hora).toLocaleString();
@@ -1724,6 +1668,41 @@ async function actualizarStats() {
             <div class="col-md-3"><div class="stats-card"><h3>${proyectos.length}</h3><p><i class="fas fa-project-diagram me-1"></i> Proyectos</p></div></div>
         `;
     }
+}
+
+// ============================================
+// PERFIL - Admin profile
+// ============================================
+
+/** Actualizar y mostrar información del perfil administrativo */
+async function actualizarPerfil() {
+    const eventos = await obtenerEventos();
+    const participantes = await obtenerParticipantes();
+    const equipos = await obtenerEquipos();
+    const proyectos = await obtenerProyectos();
+
+    // Actualizar estadísticas en el perfil
+    const totalEventosEl = document.getElementById('totalEventos');
+    if (totalEventosEl) totalEventosEl.textContent = eventos.length;
+
+    const totalParticipantesEl = document.getElementById('totalParticipantes');
+    if (totalParticipantesEl) totalParticipantesEl.textContent = participantes.length;
+
+    const totalEquiposEl = document.getElementById('totalEquipos');
+    if (totalEquiposEl) totalEquiposEl.textContent = equipos.length;
+
+    const totalProyectosEl = document.getElementById('totalProyectos');
+    if (totalProyectosEl) totalProyectosEl.textContent = proyectos.length;
+
+    // Información del administrador
+    const adminName = document.getElementById('adminName');
+    if (adminName) adminName.textContent = 'Administrador HackLine';
+
+    const adminEmail = document.getElementById('adminEmail');
+    if (adminEmail) adminEmail.textContent = 'admin@hackline.local';
+
+    const adminDescription = document.getElementById('adminDescription');
+    if (adminDescription) adminDescription.textContent = 'Sistema de gestión integral para hackatones. Gestation de eventos, participantes, equipos, proyectos y evaluaciones.';
 }
 
 // ============================================

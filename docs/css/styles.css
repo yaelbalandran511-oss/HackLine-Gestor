@@ -32,11 +32,23 @@ html {
 /* ============================================ */
 
 body {
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
     background: radial-gradient(circle at top left, rgba(255,255,255,0.18), transparent 18%),
                 radial-gradient(circle at bottom right, rgba(255,255,255,0.12), transparent 22%),
                 linear-gradient(135deg, #0f172a 0%, #1e40af 45%, #0369a1 100%);
+}
+
+body > .container,
+body > .container-fluid,
+body > .container-sm,
+body > .container-md,
+body > .container-lg,
+body > .container-xl,
+body > .container-xxl {
+    flex: 1;
 }
 
 body::before {
@@ -305,7 +317,7 @@ body::before {
     color: rgba(255, 255, 255, 0.82);
     text-align: center;
     padding: 1.25rem 1rem;
-    margin-top: 2rem;
+    margin-top: auto;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
